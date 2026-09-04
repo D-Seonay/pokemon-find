@@ -27,7 +27,7 @@ export function pickTargets(
   rng: () => number,
 ): number[] {
   const a = [...poolIds];
-  const n = Math.min(count, a.length);
+  const n = Math.min(Math.max(count, 0), a.length);
   for (let i = 0; i < n; i++) {
     const j = i + Math.floor(rng() * (a.length - i));
     const swap = a[i]!;

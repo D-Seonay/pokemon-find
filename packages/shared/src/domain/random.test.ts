@@ -13,6 +13,17 @@ describe("fnv1a32", () => {
   it("produit des valeurs différentes pour des entrées proches", () => {
     expect(fnv1a32("daily:2026-09-04")).not.toBe(fnv1a32("daily:2026-09-05"));
   });
+
+  // Golden vector tests against published FNV-1a 32-bit vectors.
+  // This implementation hashes UTF-16 code units via charCodeAt, so it coincides with
+  // byte-oriented FNV-1a only for ASCII input — which is all our seeds ever are
+  // (daily:YYYY-MM-DD, room:CODE:uuid, solo:<hex>).
+  it("produit les vecteurs de référence publiés FNV-1a 32", () => {
+    expect(fnv1a32("")).toBe(2166136261); // 0x811c9dc5, offset basis
+    expect(fnv1a32("a")).toBe(3826002220); // 0xe40c292c
+    expect(fnv1a32("abc")).toBe(440920331); // 0x1a47e90b
+    expect(fnv1a32("foobar")).toBe(3214735720); // 0xbf9cf968
+  });
 });
 
 describe("mulberry32", () => {
@@ -29,6 +40,16 @@ describe("mulberry32", () => {
     const a = mulberry32(42);
     const b = mulberry32(42);
     expect([a(), a(), a()]).toEqual([b(), b(), b()]);
+  });
+
+  // Frozen regression test: asserts that mulberry32(42) has not silently changed.
+  // These values were obtained by running the current correct implementation once;
+  // they cannot prove the algorithm is right, only that it has not drifted.
+  it("produit les valeurs gelées pour mulberry32(42)", () => {
+    const rng = mulberry32(42);
+    expect(rng()).toBe(0.6011037519201636);
+    expect(rng()).toBe(0.44829055899754167);
+    expect(rng()).toBe(0.8524657934904099);
   });
 });
 
@@ -59,10 +80,24 @@ describe("pickTargets", () => {
     expect(pickTargets([1, 2, 3], 10, rngFromSeed("test"))).toHaveLength(3);
   });
 
+  it("retourne un tableau vide pour count négatif", () => {
+    expect(pickTargets([1, 2, 3], -3, rngFromSeed("test"))).toHaveLength(0);
+  });
+
   it("ne modifie pas le tableau source", () => {
     const ids = [...pool.ids];
     pickTargets(ids, 10, rngFromSeed("test"));
     expect(ids).toEqual(pool.ids);
+  });
+
+  // Frozen regression test for pickTargets: asserts that the exact sequence of ten picks
+  // for the daily:2026-09-04 seed has not drifted. These values were obtained by running
+  // the current correct implementation once; they cannot prove the algorithm is right,
+  // only that it has not silently changed.
+  it("produit les valeurs gelées pour daily:2026-09-04", () => {
+    expect(pickTargets(pool.ids, 10, rngFromSeed("daily:2026-09-04"))).toEqual([
+      84, 51, 9, 132, 29, 122, 21, 136, 98, 101,
+    ]);
   });
 
   it("répartit à peu près uniformément sur 100 000 tirages", () => {
@@ -76,8 +111,8 @@ describe("pickTargets", () => {
     const expectedPerId = draws / pool.ids.length;
     for (const id of pool.ids) {
       const seen = counts.get(id) ?? 0;
-      expect(seen).toBeGreaterThan(expectedPerId * 0.5);
-      expect(seen).toBeLessThan(expectedPerId * 1.5);
+      expect(seen).toBeGreaterThan(expectedPerId * 0.8);
+      expect(seen).toBeLessThan(expectedPerId * 1.2);
     }
   });
 });
