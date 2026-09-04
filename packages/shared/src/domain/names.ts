@@ -3,8 +3,8 @@ export function normalizeName(input: string): string {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/♀/g, "f")
-    .replace(/♂/g, "m")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\u2640/g, "f")
+    .replace(/\u2642/g, "m")
     .replace(/[^a-z0-9]/g, "");
 }

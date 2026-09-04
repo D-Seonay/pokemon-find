@@ -26,7 +26,7 @@ describe("normalizeName", () => {
     expect(normalizeName("Ho-Oh")).toBe("hooh");
     expect(normalizeName("Porygon-Z")).toBe("porygonz");
     expect(normalizeName("Farfetch'd")).toBe("farfetchd");
-    expect(normalizeName("Farfetch'd")).toBe("farfetchd");
+    expect(normalizeName("Farfetch’d")).toBe("farfetchd");
     expect(normalizeName("Tapu Koko")).toBe("tapukoko");
   });
 
