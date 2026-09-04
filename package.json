@@ -1,6 +1,7 @@
 {
   "name": "pokemon-find",
   "private": true,
+  "type": "module",
   "packageManager": "pnpm@9.12.0",
   "engines": {
     "node": ">=22"
