@@ -13,6 +13,7 @@ const STYLES: Record<NonNullable<Props["variant"]>, string> = {
 export function Button({ variant = "primary", className = "", ...rest }: Props) {
   return (
     <button
+      type="button"
       {...rest}
       className={`rounded-[var(--radius-sm)] px-5 py-3 transition-opacity disabled:cursor-not-allowed disabled:opacity-40 ${STYLES[variant]} ${className}`}
     />
