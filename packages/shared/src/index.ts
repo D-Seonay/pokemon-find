@@ -3,4 +3,6 @@ export * from "./domain/pool.js";
 export * from "./domain/score.js";
 export * from "./domain/random.js";
 export * from "./domain/names.js";
+export * from "./domain/settings.js";
+export * from "./domain/daily.js";
 export * from "./data/pokemon.js";
