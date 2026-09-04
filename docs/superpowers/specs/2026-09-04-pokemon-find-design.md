@@ -147,7 +147,7 @@ naïve :
 | Ho-Oh (#250)                           | `hooh`      | Trait d'union.                         |
 | Porygon-Z (#474)                       | `porygonz`  | Trait d'union et lettre isolée.        |
 | Type:0 (#772)                          | `type0`     | Deux-points et chiffre.                |
-| Tapu Koko (#785)                       | `tapukoko`  | Espace.                                |
+| Tapu Koko (#785, nom **anglais** ; le français est « Tokorico ») | `tapukoko` | Espace. |
 | Mime Jr. (#439)                        | `mimejr`    | Point final.                           |
 | Étourmi (#396)                         | `etourmi`   | Accent en tête de nom.                 |
 
