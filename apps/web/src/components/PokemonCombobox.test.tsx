@@ -34,6 +34,22 @@ describe("PokemonCombobox", () => {
     for (const option of screen.getAllByRole("option")) {
       expect(option.getAttribute("aria-label")).toBeNull();
     }
+    // Aucun id d'élément de la liste ne doit être dérivé du numéro national.
+    for (const element of listbox.querySelectorAll("[id]")) {
+      expect(element.id).not.toContain("25");
+    }
+    // Le combobox ne doit pas non plus le révéler via aria-activedescendant.
+    const activeDescendant = input.getAttribute("aria-activedescendant");
+    if (activeDescendant !== null) {
+      expect(activeDescendant).not.toContain("25");
+    }
+    // Filet de sécurité : sérialise tout le HTML de la liste et vérifie l'absence du
+    // numéro national dans ce qui reste, hors `src` du sprite. L'URL de l'artwork
+    // contient légitimement le numéro (ex. ".../25.png") — c'est le seul compromis
+    // assumé (voir brief) ; on le neutralise explicitement plutôt que d'affaiblir
+    // l'assertion globale.
+    const sanitizedHtml = listbox.outerHTML.replace(/src="[^"]*"/g, 'src="REDACTED"');
+    expect(sanitizedHtml).not.toContain("25");
   });
 
   it("garde le bouton de validation désactivé tant que rien n'est sélectionné", async () => {

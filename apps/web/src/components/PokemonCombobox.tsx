@@ -86,9 +86,13 @@ export function PokemonCombobox({ pool, disabled = false, onSubmit }: Props) {
     }
   }
 
-  const activeId = suggestions[activeIndex]
-    ? `${listId}-${suggestions[activeIndex]!.id}`
-    : undefined;
+  // L'id DOM d'une option est dérivé de son index, jamais de `pokemon.id` (le numéro
+  // national) : cet id est lu par `aria-activedescendant`, un attribut accessible, et ne
+  // doit donc jamais révéler la réponse.
+  const activeId =
+    activeIndex >= 0 && activeIndex < suggestions.length
+      ? `${listId}-option-${activeIndex}`
+      : undefined;
 
   return (
     <div className="flex flex-col gap-3">
@@ -131,7 +135,7 @@ export function PokemonCombobox({ pool, disabled = false, onSubmit }: Props) {
             {suggestions.map((pokemon, index) => (
               <li
                 key={pokemon.id}
-                id={`${listId}-${pokemon.id}`}
+                id={`${listId}-option-${index}`}
                 role="option"
                 aria-selected={index === activeIndex}
                 onMouseDown={(event) => {
