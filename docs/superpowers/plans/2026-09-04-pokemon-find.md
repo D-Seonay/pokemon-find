@@ -29,34 +29,34 @@
 
 ## Structure des fichiers
 
-| Fichier | Responsabilité | Tâche |
-|---|---|---|
-| `pnpm-workspace.yaml`, `package.json`, `tsconfig.base.json`, `eslint.config.js` | Outillage du monorepo | 1 |
-| `packages/shared/src/domain/generations.ts` | Bornes normatives des 9 générations | 1 |
-| `packages/shared/src/domain/pool.ts` | Construction d'un pool et calcul de `span` | 2 |
-| `packages/shared/src/domain/score.ts` | Formule de score | 3 |
-| `packages/shared/src/domain/random.ts` | FNV-1a, mulberry32, tirage sans remise | 4 |
-| `packages/shared/src/domain/names.ts` | `normalizeName` puis `searchPokemon` | 5, 7 |
-| `packages/shared/src/data/pokemon.json` | Dataset des 1025 Pokémon | 6 |
-| `packages/shared/src/data/pokemon.ts` | Chargement typé et index | 6 |
-| `scripts/build-dataset.ts` | Import PokeAPI, exécution manuelle | 6 |
-| `packages/shared/src/domain/settings.ts` | `GameSettings`, validation, défauts | 8 |
-| `packages/shared/src/domain/daily.ts` | Graine du jour, paliers, texte de partage | 8 |
-| `packages/shared/src/protocol/events.ts` | Types Socket.IO et codes d'erreur | 15 |
-| `apps/web/src/styles/tokens.css`, `components/Button.tsx`, `components/PokemonSprite.tsx` | Design system | 9 |
-| `apps/web/src/components/PokemonCombobox.tsx` | Champ de réponse et autocomplétion | 10 |
-| `apps/web/src/components/TargetNumber.tsx`, `components/Timer.tsx` | Cible et chrono | 11 |
-| `apps/web/src/game/useSoloGame.ts` | Machine à états d'une partie solo | 12 |
-| `apps/web/src/storage/local.ts` | Accès tolérant au stockage navigateur | 12 |
-| `apps/web/src/pages/*.tsx`, `App.tsx` | Écrans et routes | 13, 14, 19 |
-| `apps/web/src/components/RoundResult.tsx`, `Scoreboard.tsx`, `GenerationPicker.tsx` | Restitution des résultats | 13, 19 |
-| `apps/server/src/config.ts`, `log.ts`, `http.ts`, `index.ts` | Socle serveur | 15 |
-| `apps/server/src/rooms/codes.ts`, `RoomStore.ts` | Codes et registre des rooms | 16 |
-| `apps/server/src/rooms/Room.ts` | Machine à états d'une partie multi | 17 |
-| `apps/server/src/socket/handlers.ts`, `rateLimit.ts` | Branchement des événements | 18 |
-| `apps/web/src/net/socket.ts`, `net/useRoom.ts` | Client temps réel | 19 |
-| `e2e/*.spec.ts` | Parcours de bout en bout | 14, 20 |
-| `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `.env.example`, `README.md` | Livraison | 21 |
+| Fichier                                                                                   | Responsabilité                             | Tâche      |
+| ----------------------------------------------------------------------------------------- | ------------------------------------------ | ---------- |
+| `pnpm-workspace.yaml`, `package.json`, `tsconfig.base.json`, `eslint.config.js`           | Outillage du monorepo                      | 1          |
+| `packages/shared/src/domain/generations.ts`                                               | Bornes normatives des 9 générations        | 1          |
+| `packages/shared/src/domain/pool.ts`                                                      | Construction d'un pool et calcul de `span` | 2          |
+| `packages/shared/src/domain/score.ts`                                                     | Formule de score                           | 3          |
+| `packages/shared/src/domain/random.ts`                                                    | FNV-1a, mulberry32, tirage sans remise     | 4          |
+| `packages/shared/src/domain/names.ts`                                                     | `normalizeName` puis `searchPokemon`       | 5, 7       |
+| `packages/shared/src/data/pokemon.json`                                                   | Dataset des 1025 Pokémon                   | 6          |
+| `packages/shared/src/data/pokemon.ts`                                                     | Chargement typé et index                   | 6          |
+| `scripts/build-dataset.ts`                                                                | Import PokeAPI, exécution manuelle         | 6          |
+| `packages/shared/src/domain/settings.ts`                                                  | `GameSettings`, validation, défauts        | 8          |
+| `packages/shared/src/domain/daily.ts`                                                     | Graine du jour, paliers, texte de partage  | 8          |
+| `packages/shared/src/protocol/events.ts`                                                  | Types Socket.IO et codes d'erreur          | 15         |
+| `apps/web/src/styles/tokens.css`, `components/Button.tsx`, `components/PokemonSprite.tsx` | Design system                              | 9          |
+| `apps/web/src/components/PokemonCombobox.tsx`                                             | Champ de réponse et autocomplétion         | 10         |
+| `apps/web/src/components/TargetNumber.tsx`, `components/Timer.tsx`                        | Cible et chrono                            | 11         |
+| `apps/web/src/game/useSoloGame.ts`                                                        | Machine à états d'une partie solo          | 12         |
+| `apps/web/src/storage/local.ts`                                                           | Accès tolérant au stockage navigateur      | 12         |
+| `apps/web/src/pages/*.tsx`, `App.tsx`                                                     | Écrans et routes                           | 13, 14, 19 |
+| `apps/web/src/components/RoundResult.tsx`, `Scoreboard.tsx`, `GenerationPicker.tsx`       | Restitution des résultats                  | 13, 19     |
+| `apps/server/src/config.ts`, `log.ts`, `http.ts`, `index.ts`                              | Socle serveur                              | 15         |
+| `apps/server/src/rooms/codes.ts`, `RoomStore.ts`                                          | Codes et registre des rooms                | 16         |
+| `apps/server/src/rooms/Room.ts`                                                           | Machine à états d'une partie multi         | 17         |
+| `apps/server/src/socket/handlers.ts`, `rateLimit.ts`                                      | Branchement des événements                 | 18         |
+| `apps/web/src/net/socket.ts`, `net/useRoom.ts`                                            | Client temps réel                          | 19         |
+| `e2e/*.spec.ts`                                                                           | Parcours de bout en bout                   | 14, 20     |
+| `Dockerfile`, `docker-compose.yml`, `.dockerignore`, `.env.example`, `README.md`          | Livraison                                  | 21         |
 
 ---
 
@@ -65,12 +65,14 @@
 ### Task 1: Monorepo et bornes de générations
 
 **Files:**
+
 - Create: `package.json`, `pnpm-workspace.yaml`, `tsconfig.base.json`, `eslint.config.js`, `.prettierrc`, `vitest.workspace.ts`
 - Create: `packages/shared/package.json`, `packages/shared/tsconfig.json`, `packages/shared/src/index.ts`
 - Create: `packages/shared/src/domain/generations.ts`
 - Test: `packages/shared/src/domain/generations.test.ts`
 
 **Interfaces:**
+
 - Consumes: rien.
 - Produces: `MAX_POKEMON_ID: 1025`, `type GenerationId = 1|2|3|4|5|6|7|8|9`, `ALL_GENERATIONS: readonly GenerationId[]`, `GENERATION_BOUNDS: Readonly<Record<GenerationId, readonly [number, number]>>`, `generationOf(id: number): GenerationId`, `idsOfGeneration(gen: GenerationId): number[]`.
 
@@ -326,11 +328,13 @@ git commit -m "feat(shared): monorepo pnpm et bornes normatives des génération
 ### Task 2: Construction du pool
 
 **Files:**
+
 - Create: `packages/shared/src/domain/pool.ts`
 - Test: `packages/shared/src/domain/pool.test.ts`
 - Modify: `packages/shared/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `GenerationId`, `ALL_GENERATIONS`, `isGenerationId`, `idsOfGeneration` (Task 1).
 - Produces: `type Pool = { generations: GenerationId[]; ids: number[]; minId: number; maxId: number; span: number }`, `buildPool(generations: readonly number[]): Pool`, `class InvalidPoolError extends Error`, `poolSignature(generations: readonly GenerationId[]): string`.
 
@@ -406,11 +410,7 @@ Expected: FAIL — module `./pool.js` introuvable.
 `packages/shared/src/domain/pool.ts` :
 
 ```ts
-import {
-  type GenerationId,
-  idsOfGeneration,
-  isGenerationId,
-} from "./generations.js";
+import { type GenerationId, idsOfGeneration, isGenerationId } from "./generations.js";
 
 export class InvalidPoolError extends Error {
   constructor(message: string) {
@@ -468,11 +468,13 @@ git commit -m "feat(shared): construction du pool et calcul du span"
 ### Task 3: Formule de score
 
 **Files:**
+
 - Create: `packages/shared/src/domain/score.ts`
 - Test: `packages/shared/src/domain/score.test.ts`
 - Modify: `packages/shared/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: rien.
 - Produces: `MAX_SCORE: 1000`, `DECAY: 10`, `scoreForAnswer(targetId: number, answerId: number | null, span: number): number`, `gapBetween(targetId: number, answerId: number): number`.
 
@@ -562,11 +564,7 @@ export function gapBetween(targetId: number, answerId: number): number {
   return Math.abs(answerId - targetId);
 }
 
-export function scoreForAnswer(
-  targetId: number,
-  answerId: number | null,
-  span: number,
-): number {
+export function scoreForAnswer(targetId: number, answerId: number | null, span: number): number {
   if (answerId === null) return 0;
   const gap = gapBetween(targetId, answerId);
   return Math.round(MAX_SCORE * Math.exp((-DECAY * gap) / span));
@@ -592,11 +590,13 @@ git commit -m "feat(shared): formule de score exponentielle relative au span"
 ### Task 4: Générateur pseudo-aléatoire et tirage des cibles
 
 **Files:**
+
 - Create: `packages/shared/src/domain/random.ts`
 - Test: `packages/shared/src/domain/random.test.ts`
 - Modify: `packages/shared/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: rien.
 - Produces: `fnv1a32(input: string): number`, `mulberry32(seed: number): () => number`, `rngFromSeed(seed: string): () => number`, `pickTargets(poolIds: readonly number[], count: number, rng: () => number): number[]`, `randomSeed(): string`.
 
@@ -771,11 +771,13 @@ git commit -m "feat(shared): PRNG déterministe et tirage des cibles sans remise
 ### Task 5: Normalisation des noms
 
 **Files:**
+
 - Create: `packages/shared/src/domain/names.ts`
 - Test: `packages/shared/src/domain/names.test.ts`
 - Modify: `packages/shared/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: rien.
 - Produces: `normalizeName(input: string): string`.
 
@@ -869,6 +871,7 @@ git commit -m "feat(shared): normalisation des noms de Pokémon"
 ### Task 6: Dataset des 1025 Pokémon
 
 **Files:**
+
 - Create: `scripts/build-dataset.ts`
 - Create: `packages/shared/src/data/pokemon.json` (généré)
 - Create: `packages/shared/src/data/pokemon.ts`
@@ -876,6 +879,7 @@ git commit -m "feat(shared): normalisation des noms de Pokémon"
 - Modify: `package.json` (script `dataset:build`), `packages/shared/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `normalizeName` (Task 5), `generationOf`, `MAX_POKEMON_ID` (Task 1).
 - Produces: `type Pokemon = { id: number; nameFr: string; nameEn: string; slugFr: string; slugEn: string; generation: GenerationId; spriteUrl: string }`, `POKEMON: readonly Pokemon[]`, `pokemonById(id: number): Pokemon`, `tryPokemonById(id: number): Pokemon | undefined`, `pokemonOfPool(pool: Pool): Pokemon[]`.
 
@@ -1090,10 +1094,12 @@ git commit -m "feat(shared): dataset des 1025 Pokémon et script d'import PokeAP
 ### Task 7: Recherche pour l'autocomplétion
 
 **Files:**
+
 - Modify: `packages/shared/src/domain/names.ts`
 - Modify: `packages/shared/src/domain/names.test.ts`
 
 **Interfaces:**
+
 - Consumes: `normalizeName` (Task 5), `Pokemon`, `pokemonOfPool` (Task 6), `Pool` (Task 2).
 - Produces: `searchPokemon(query: string, pool: Pool, limit?: number): Pokemon[]` (limite par défaut 8).
 
@@ -1208,12 +1214,14 @@ git commit -m "feat(shared): recherche de Pokémon restreinte au pool pour l'aut
 ### Task 8: Réglages de partie et défi du jour
 
 **Files:**
+
 - Create: `packages/shared/src/domain/settings.ts`
 - Create: `packages/shared/src/domain/daily.ts`
 - Test: `packages/shared/src/domain/settings.test.ts`, `packages/shared/src/domain/daily.test.ts`
 - Modify: `packages/shared/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `isGenerationId` (Task 1), `buildPool` (Task 2).
 - Produces:
   - `ROUND_DURATIONS = [10000, 15000, 25000] as const`, `ROUND_COUNTS = [5, 10, 15] as const`
@@ -1244,7 +1252,11 @@ describe("validateSettings", () => {
   });
 
   it("trie et déduplique les générations", () => {
-    const settings = validateSettings({ generations: [3, 1, 3], roundDurationMs: 10000, roundCount: 5 });
+    const settings = validateSettings({
+      generations: [3, 1, 3],
+      roundDurationMs: 10000,
+      roundCount: 5,
+    });
     expect(settings.generations).toEqual([1, 3]);
   });
 
@@ -1400,7 +1412,8 @@ export function validateSettings(input: unknown): GameSettings {
     throw new InvalidSettingsError("Sélectionne au moins une génération.");
   }
   for (const gen of generations) {
-    if (!isGenerationId(gen)) throw new InvalidSettingsError(`Génération invalide : ${String(gen)}`);
+    if (!isGenerationId(gen))
+      throw new InvalidSettingsError(`Génération invalide : ${String(gen)}`);
   }
 
   const duration = candidate.roundDurationMs;
@@ -1460,8 +1473,7 @@ export function shareText(input: {
   const max = input.points.length * 1000;
   // toLocaleString("fr-FR") insère U+202F ou U+00A0 comme séparateur de milliers ;
   // on le normalise en espace ordinaire pour rendre le test stable entre versions de Node.
-  const format = (value: number) =>
-    value.toLocaleString("fr-FR").replace(/[\u202f\u00a0]/g, " ");
+  const format = (value: number) => value.toLocaleString("fr-FR").replace(/[\u202f\u00a0]/g, " ");
   return [
     `Pokémon Find — ${dailyKey(input.date)}`,
     `${format(input.total)} / ${format(max)}`,
@@ -1497,12 +1509,14 @@ git commit -m "feat(shared): réglages de partie validés et défi du jour déte
 ### Task 9: Socle du front et design system
 
 **Files:**
+
 - Create: `apps/web/package.json`, `apps/web/tsconfig.json`, `apps/web/vite.config.ts`, `apps/web/index.html`, `apps/web/vitest.setup.ts`
 - Create: `apps/web/src/main.tsx`, `apps/web/src/App.tsx`, `apps/web/src/styles/tokens.css`
 - Create: `apps/web/src/components/Button.tsx`, `apps/web/src/components/PokemonSprite.tsx`
 - Test: `apps/web/src/components/PokemonSprite.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `Pokemon` (Task 6).
 - Produces: `Button(props: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: "primary" | "ghost" | "danger" })`, `PokemonSprite(props: { pokemon: Pokemon; size?: number })`.
 
@@ -1829,10 +1843,12 @@ git commit -m "feat(web): socle Vite/React, jetons de design et composants de ba
 ### Task 10: Champ de réponse avec autocomplétion
 
 **Files:**
+
 - Create: `apps/web/src/components/PokemonCombobox.tsx`
 - Test: `apps/web/src/components/PokemonCombobox.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `Pool`, `searchPokemon`, `normalizeName`, `pokemonOfPool`, `Pokemon` (Tasks 2, 5, 6, 7), `PokemonSprite`, `Button` (Task 9).
 - Produces: `PokemonCombobox(props: { pool: Pool; disabled?: boolean; onSubmit: (pokemon: Pokemon) => void })`.
 
@@ -2041,7 +2057,9 @@ export function PokemonCombobox({ pool, disabled = false, onSubmit }: Props) {
     }
   }
 
-  const activeId = suggestions[activeIndex] ? `${listId}-${suggestions[activeIndex]!.id}` : undefined;
+  const activeId = suggestions[activeIndex]
+    ? `${listId}-${suggestions[activeIndex]!.id}`
+    : undefined;
 
   return (
     <div className="flex flex-col gap-3">
@@ -2131,10 +2149,12 @@ git commit -m "feat(web): champ de réponse avec autocomplétion restreinte au p
 ### Task 11: Affichage de la cible et du chrono
 
 **Files:**
+
 - Create: `apps/web/src/components/TargetNumber.tsx`, `apps/web/src/components/Timer.tsx`
 - Test: `apps/web/src/components/TargetNumber.test.tsx`, `apps/web/src/components/Timer.test.tsx`
 
 **Interfaces:**
+
 - Consumes: rien.
 - Produces: `TargetNumber(props: { id: number; maxId: number })`, `Timer(props: { remainingMs: number; totalMs: number })`.
 
@@ -2271,14 +2291,7 @@ export function Timer({ remainingMs, totalMs }: { remainingMs: number; totalMs: 
           strokeDashoffset={CIRCUMFERENCE * (1 - ratio)}
           transform="rotate(-90 22 22)"
         />
-        <text
-          x="22"
-          y="27"
-          textAnchor="middle"
-          className="mono"
-          fill="var(--text)"
-          fontSize="14"
-        >
+        <text x="22" y="27" textAnchor="middle" className="mono" fill="var(--text)" fontSize="14">
           {seconds}
         </text>
       </svg>
@@ -2304,11 +2317,13 @@ git commit -m "feat(web): affichage de la cible et anneau de chrono"
 ### Task 12: Stockage navigateur et machine à états solo
 
 **Files:**
+
 - Create: `apps/web/src/storage/local.ts`, `apps/web/src/storage/scores.ts`
 - Create: `apps/web/src/game/useSoloGame.ts`
 - Test: `apps/web/src/storage/local.test.ts`, `apps/web/src/storage/scores.test.ts`, `apps/web/src/game/useSoloGame.test.ts`
 
 **Interfaces:**
+
 - Consumes: `buildPool`, `pickTargets`, `rngFromSeed`, `scoreForAnswer`, `GameSettings`, `poolSignature` (Tasks 2, 3, 4, 8).
 - Produces:
   - `KEYS = { nickname, best, daily, session }`, `readJson<T>(key: string, fallback: T, kind?: "local" | "session"): T`, `writeJson(key: string, value: unknown, kind?: "local" | "session"): void`, `removeKey(key: string, kind?: "local" | "session"): void`
@@ -2548,7 +2563,11 @@ describe("useSoloGame", () => {
     const { result } = renderHook(() => useSoloGame(DEFAULT_SETTINGS, SEED));
     advance(DEFAULT_SETTINGS.roundDurationMs + 200);
     expect(result.current.phase).toBe("reveal");
-    expect(result.current.rounds[0]).toMatchObject({ answerId: null, points: 0, responseTimeMs: null });
+    expect(result.current.rounds[0]).toMatchObject({
+      answerId: null,
+      points: 0,
+      responseTimeMs: null,
+    });
   });
 
   it("ignore une seconde réponse dans la même manche", () => {
@@ -2725,12 +2744,14 @@ git commit -m "feat(web): stockage tolérant aux pannes et machine à états de 
 ### Task 13: Écrans du mode solo
 
 **Files:**
+
 - Create: `apps/web/src/components/GenerationPicker.tsx`, `apps/web/src/components/RoundResult.tsx`, `apps/web/src/components/GameOver.tsx`
 - Create: `apps/web/src/pages/Home.tsx`, `apps/web/src/pages/SoloSetup.tsx`, `apps/web/src/pages/SoloGame.tsx`
 - Modify: `apps/web/src/App.tsx`
 - Test: `apps/web/src/components/GenerationPicker.test.tsx`, `apps/web/src/pages/SoloSetup.test.tsx`
 
 **Interfaces:**
+
 - Consumes: tout le paquet `shared`, `useSoloGame` (Task 12), `PokemonCombobox` (Task 10), `TargetNumber`, `Timer` (Task 11), `readBest`, `saveBest` (Task 12).
 - Produces: `GenerationPicker(props: { value: GenerationId[]; onChange: (next: GenerationId[]) => void })`, `RoundResult(props: { round: SoloRound; pool: Pool; onSkip?: () => void })`, `GameOver(props: { rounds: SoloRound[]; settings: GameSettings; onReplay: () => void })`, pages `Home`, `SoloSetup`, `SoloGame`.
 
@@ -3146,7 +3167,14 @@ export function SoloGame() {
     return <Navigate to="/solo" replace />;
   }
 
-  return <SoloGameBoard settings={settings} seed={seed} onReplay={() => setSeed(randomSeed())} onQuit={() => navigate("/solo")} />;
+  return (
+    <SoloGameBoard
+      settings={settings}
+      seed={seed}
+      onReplay={() => setSeed(randomSeed())}
+      onQuit={() => navigate("/solo")}
+    />
+  );
 }
 
 function SoloGameBoard({
@@ -3243,12 +3271,14 @@ git commit -m "feat(web): écrans du mode solo, du choix des réglages au récap
 ### Task 14: Défi du jour et parcours solo de bout en bout
 
 **Files:**
+
 - Create: `apps/web/src/pages/Daily.tsx`
 - Create: `playwright.config.ts`, `e2e/solo.spec.ts`
 - Modify: `apps/web/src/App.tsx`, `package.json` (script `test:e2e`)
 - Test: `apps/web/src/pages/Daily.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `DAILY_SETTINGS`, `dailyKey`, `dailySeed`, `shareText` (Task 8), `useSoloGame` (Task 12), composants des tâches 9 à 13.
 - Produces: page `Daily`, entrée `pkfind.daily.v1` de forme `{ date: string; total: number; points: number[] }`.
 
@@ -3341,13 +3371,7 @@ export function Daily() {
   return <DailyBoard onFinish={setEntry} today={today} />;
 }
 
-function DailyBoard({
-  today,
-  onFinish,
-}: {
-  today: string;
-  onFinish: (entry: DailyEntry) => void;
-}) {
+function DailyBoard({ today, onFinish }: { today: string; onFinish: (entry: DailyEntry) => void }) {
   const game = useSoloGame(DAILY_SETTINGS, dailySeed(new Date()));
 
   useEffect(() => {
@@ -3513,6 +3537,7 @@ git commit -m "feat(web): défi du jour partageable et parcours solo de bout en 
 ### Task 15: Protocole partagé et socle du serveur
 
 **Files:**
+
 - Create: `packages/shared/src/protocol/events.ts`
 - Create: `apps/server/package.json`, `apps/server/tsconfig.json`
 - Create: `apps/server/src/config.ts`, `apps/server/src/log.ts`, `apps/server/src/http.ts`, `apps/server/src/index.ts`
@@ -3520,6 +3545,7 @@ git commit -m "feat(web): défi du jour partageable et parcours solo de bout en 
 - Modify: `packages/shared/src/index.ts`
 
 **Interfaces:**
+
 - Consumes: `GameSettings` (Task 8), `Pokemon` (Task 6).
 - Produces:
   - Types `RoomStatus`, `PlayerPublic`, `RoomState`, `RoundResult`, `Standing`, `ErrorCode`, `Ack<T>`, `ClientToServerEvents`, `ServerToClientEvents`, `ERROR_MESSAGES: Record<ErrorCode, string>`
@@ -3714,7 +3740,12 @@ Ajouter à `packages/shared/src/index.ts` : `export * from "./protocol/events.js
 ```json
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "outDir": "dist", "rootDir": "src", "module": "NodeNext", "moduleResolution": "nodenext" },
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "module": "NodeNext",
+    "moduleResolution": "nodenext"
+  },
   "include": ["src/**/*"]
 }
 ```
@@ -3777,9 +3808,7 @@ import { loadConfig } from "./config.js";
 import { createHttpApp } from "./http.js";
 
 let baseUrl = "";
-const server = createServer(
-  createHttpApp(loadConfig({}), () => ({ rooms: 2, players: 5 })),
-);
+const server = createServer(createHttpApp(loadConfig({}), () => ({ rooms: 2, players: 5 })));
 
 beforeAll(async () => {
   await new Promise<void>((resolve) => server.listen(0, resolve));
@@ -3997,10 +4026,12 @@ git commit -m "feat(server): protocole Socket.IO typé, configuration validée e
 ### Task 16: Codes de room et lobby
 
 **Files:**
+
 - Create: `apps/server/src/rooms/codes.ts`, `apps/server/src/rooms/Room.ts`
 - Test: `apps/server/src/rooms/codes.test.ts`, `apps/server/src/rooms/Room.lobby.test.ts`
 
 **Interfaces:**
+
 - Consumes: `GameSettings`, `DEFAULT_SETTINGS`, `validateSettings` (Task 8), types du protocole et `ERROR_MESSAGES` (Task 15).
 - Produces:
   - `CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"`, `CODE_LENGTH = 4`, `generateCode(): string`, `normalizeCode(raw: string): string`
@@ -4114,9 +4145,7 @@ describe("lobby", () => {
 
   it("refuse un neuvième joueur", () => {
     for (let i = 0; i < MAX_PLAYERS; i++) room.addPlayer(`Joueur${i}`);
-    expect(() => room.addPlayer("DeTrop")).toThrow(
-      expect.objectContaining({ code: "ROOM_FULL" }),
-    );
+    expect(() => room.addPlayer("DeTrop")).toThrow(expect.objectContaining({ code: "ROOM_FULL" }));
   });
 
   it("n'accepte les réglages que de l'hôte, et seulement en lobby", () => {
@@ -4381,16 +4410,14 @@ export class Room {
       code: this.code,
       status: this.state,
       settings: this.settings,
-      players: this.players.map(
-        (player): PlayerPublic => ({
-          id: player.id,
-          nickname: player.nickname,
-          connected: player.connected,
-          isHost: player.id === this.hostId,
-          score: player.score,
-          hasAnswered: player.answer !== null,
-        }),
-      ),
+      players: this.players.map((player): PlayerPublic => ({
+        id: player.id,
+        nickname: player.nickname,
+        connected: player.connected,
+        isHost: player.id === this.hostId,
+        score: player.score,
+        hasAnswered: player.answer !== null,
+      })),
       roundIndex: this.currentRoundIndex,
       roundCount: this.settings.roundCount,
     };
@@ -4452,10 +4479,12 @@ git commit -m "feat(server): codes de room et gestion du lobby"
 ### Task 17: Boucle de jeu d'une room
 
 **Files:**
+
 - Modify: `apps/server/src/rooms/Room.ts`
 - Test: `apps/server/src/rooms/Room.game.test.ts`
 
 **Interfaces:**
+
 - Consumes: `buildPool`, `pickTargets`, `rngFromSeed`, `scoreForAnswer`, `gapBetween` (Tasks 2, 3, 4), `Room` (Task 16).
 - Produces, ajoutés à `Room` : `start(playerId: string): void`, `answer(playerId: string, roundIndex: number, pokemonId: number): void`, `playAgain(playerId: string): void`, `dispose(): void`.
 
@@ -4871,11 +4900,13 @@ git commit -m "feat(server): boucle de jeu autoritaire d'une room, du décompte 
 ### Task 18: Registre des rooms et branchement Socket.IO
 
 **Files:**
+
 - Create: `apps/server/src/rooms/RoomStore.ts`, `apps/server/src/socket/rateLimit.ts`, `apps/server/src/socket/handlers.ts`
 - Modify: `apps/server/src/index.ts`
 - Test: `apps/server/src/socket/rateLimit.test.ts`, `apps/server/src/socket/handlers.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Room`, `RoomError`, `generateCode`, `normalizeCode` (Tasks 16, 17), `Config` (Task 15), `pokemonById` (Task 6).
 - Produces:
   - `class RoomStore { constructor(config: Config, io: Server); create(): Room; get(code: string): Room; tryGet(code: string): Room | undefined; destroy(code: string, reason: "expired" | "empty" | "shutdown"): void; stats(): { rooms: number; players: number }; startPurge(): void; stopPurge(): void; destroyAll(reason): void }`
@@ -5097,8 +5128,14 @@ describe("handlers Socket.IO", () => {
     const revealed = once<{ target: { id: number; nameFr: string } }>(host, "round:reveal");
     await emit(host, "room:start", {});
     const started = await once<{ roundIndex: number; targetId: number }>(host, "round:start");
-    await emit(host, "round:answer", { roundIndex: started.roundIndex, pokemonId: started.targetId });
-    await emit(guest, "round:answer", { roundIndex: started.roundIndex, pokemonId: started.targetId });
+    await emit(host, "round:answer", {
+      roundIndex: started.roundIndex,
+      pokemonId: started.targetId,
+    });
+    await emit(guest, "round:answer", {
+      roundIndex: started.roundIndex,
+      pokemonId: started.targetId,
+    });
 
     const reveal = await revealed;
     expect(reveal.target.id).toBe(started.targetId);
@@ -5546,7 +5583,10 @@ const store = new RoomStore(config, io);
 store.startPurge();
 registerHandlers(io, store, config);
 
-httpServer.on("request", createHttpApp(config, () => store.stats()));
+httpServer.on(
+  "request",
+  createHttpApp(config, () => store.stats()),
+);
 httpServer.listen(config.port, () => log.info("server_started", { port: config.port }));
 
 process.on("SIGTERM", () => {
@@ -5575,6 +5615,7 @@ git commit -m "feat(server): registre des rooms, limitation de débit et branche
 ### Task 19: Client temps réel et écrans de room
 
 **Files:**
+
 - Create: `apps/web/src/net/socket.ts`, `apps/web/src/net/useRoom.ts`
 - Create: `apps/web/src/components/Scoreboard.tsx`, `apps/web/src/components/MultiReveal.tsx`
 - Create: `apps/web/src/pages/JoinRoom.tsx`, `apps/web/src/pages/Room.tsx`
@@ -5582,6 +5623,7 @@ git commit -m "feat(server): registre des rooms, limitation de débit et branche
 - Test: `apps/web/src/components/Scoreboard.test.tsx`, `apps/web/src/components/MultiReveal.test.tsx`
 
 **Interfaces:**
+
 - Consumes: protocole (Task 15), composants (Tasks 9 à 11), `KEYS`/`readJson`/`writeJson` (Task 12).
 - Produces: `getSocket(): Socket<ServerToClientEvents, ClientToServerEvents>`, `useRoom(input: { code: string; nickname: string; create: boolean; onCreated: (code: string) => void }): RoomView`, `Scoreboard(props: { standings: Standing[]; highlightPlayerId?: string })`, `MultiReveal(props: { target: Pokemon; results: RoundResult[]; maxId: number })`, pages `JoinRoom` et `Room`.
 
@@ -5931,9 +5973,13 @@ export function useRoom(input: {
   }, [input, input.code, input.create, input.nickname]);
 
   const emitSimple = useCallback((event: "room:start" | "room:playAgain" | "room:leave") => {
-    getSocket().emit(event as never, {} as never, ((ack: Ack<unknown>) => {
-      if (!ack.ok) setError(ack.message);
-    }) as never);
+    getSocket().emit(
+      event as never,
+      {} as never,
+      ((ack: Ack<unknown>) => {
+        if (!ack.ok) setError(ack.message);
+      }) as never,
+    );
   }, []);
 
   return {
@@ -5958,13 +6004,9 @@ export function useRoom(input: {
         }),
       answer: (pokemonId) => {
         if (!round) return;
-        getSocket().emit(
-          "round:answer",
-          { roundIndex: round.roundIndex, pokemonId },
-          (ack) => {
-            if (!ack.ok) setError(ack.message);
-          },
-        );
+        getSocket().emit("round:answer", { roundIndex: round.roundIndex, pokemonId }, (ack) => {
+          if (!ack.ok) setError(ack.message);
+        });
       },
     },
   };
@@ -6068,7 +6110,10 @@ export function Room() {
     return (
       <section className="flex flex-col gap-4">
         <h1 className="text-3xl font-extrabold">Classement final</h1>
-        <Scoreboard standings={room.final.standings} highlightPlayerId={room.playerId ?? undefined} />
+        <Scoreboard
+          standings={room.final.standings}
+          highlightPlayerId={room.playerId ?? undefined}
+        />
         {isHost && <Button onClick={room.actions.playAgain}>Rejouer</Button>}
       </section>
     );
@@ -6122,7 +6167,9 @@ export function Room() {
       <p className="mono text-6xl tracking-[0.3em]">{state.code}</p>
       <Button
         variant="ghost"
-        onClick={() => void navigator.clipboard.writeText(`${window.location.origin}/room/${state.code}`)}
+        onClick={() =>
+          void navigator.clipboard.writeText(`${window.location.origin}/room/${state.code}`)
+        }
       >
         Copier le lien
       </Button>
@@ -6137,14 +6184,12 @@ export function Room() {
       {isHost ? (
         <GenerationPicker
           value={state.settings.generations}
-          onChange={(generations) =>
-            room.actions.setSettings({ ...state.settings, generations })
-          }
+          onChange={(generations) => room.actions.setSettings({ ...state.settings, generations })}
         />
       ) : (
         <p className="text-[var(--text-dim)]">
-          Générations : {state.settings.generations.join(", ")} · {state.settings.roundDurationMs / 1000} s ·{" "}
-          {state.settings.roundCount} manches
+          Générations : {state.settings.generations.join(", ")} ·{" "}
+          {state.settings.roundDurationMs / 1000} s · {state.settings.roundCount} manches
         </p>
       )}
       {isHost && (
@@ -6189,10 +6234,12 @@ git commit -m "feat(web): client temps réel et écrans de room multijoueur"
 ### Task 20: Parcours multijoueur de bout en bout
 
 **Files:**
+
 - Modify: `playwright.config.ts`
 - Create: `e2e/multi.spec.ts`
 
 **Interfaces:**
+
 - Consumes: l'application complète.
 - Produces: rien de nouveau.
 
@@ -6319,10 +6366,12 @@ git commit -m "test(e2e): parcours multijoueur à deux navigateurs et reconnexio
 ### Task 21: Conteneur Docker et documentation
 
 **Files:**
+
 - Create: `Dockerfile`, `.dockerignore`, `docker-compose.yml`, `.env.example`, `README.md`
 - Modify: `apps/server/src/config.ts` (valeur par défaut de `WEB_DIR` en production)
 
 **Interfaces:**
+
 - Consumes: l'application construite.
 - Produces: une image exécutable exposant le port 3000.
 

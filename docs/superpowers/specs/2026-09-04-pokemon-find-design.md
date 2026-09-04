@@ -42,25 +42,25 @@ Deux façons de jouer :
 - Base de données, persistance côté serveur, classement mondial.
 - Chat texte ou vocal dans les rooms.
 - Modes équipe, tournoi, ou spectateur.
-- Internationalisation de l'interface (l'interface est en français ; seuls les *noms de
-  Pokémon* sont acceptés en anglais à la saisie).
+- Internationalisation de l'interface (l'interface est en français ; seuls les _noms de
+  Pokémon_ sont acceptés en anglais à la saisie).
 - Application mobile native, mode hors-ligne, service worker.
 - Sons et musique.
 
 ## 3. Glossaire
 
-| Terme | Définition |
-|---|---|
-| **Cible** | Le numéro national affiché au joueur pour une manche. |
-| **Proposition** | Le Pokémon choisi par le joueur pour répondre à une cible. |
-| **Écart** | Valeur absolue de la différence entre le numéro de la proposition et la cible. |
-| **Pool** | L'ensemble des Pokémon jouables pour une partie, défini par les générations sélectionnées. |
-| **Étendue** (*span*) | `maxId − minId + 1` sur le pool. Sert de dénominateur au score. |
-| **Manche** (*round*) | Une cible, une réponse, un score. |
-| **Partie** (*game*) | Une suite de manches, terminée par un classement. |
-| **Room** | Une partie multijoueur identifiée par un code de 4 caractères. |
-| **Hôte** | Le joueur qui règle et démarre la partie dans une room. |
-| **Slug** | Forme normalisée d'un nom, utilisée pour la comparaison. |
+| Terme                | Définition                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------ |
+| **Cible**            | Le numéro national affiché au joueur pour une manche.                                      |
+| **Proposition**      | Le Pokémon choisi par le joueur pour répondre à une cible.                                 |
+| **Écart**            | Valeur absolue de la différence entre le numéro de la proposition et la cible.             |
+| **Pool**             | L'ensemble des Pokémon jouables pour une partie, défini par les générations sélectionnées. |
+| **Étendue** (_span_) | `maxId − minId + 1` sur le pool. Sert de dénominateur au score.                            |
+| **Manche** (_round_) | Une cible, une réponse, un score.                                                          |
+| **Partie** (_game_)  | Une suite de manches, terminée par un classement.                                          |
+| **Room**             | Une partie multijoueur identifiée par un code de 4 caractères.                             |
+| **Hôte**             | Le joueur qui règle et démarre la partie dans une room.                                    |
+| **Slug**             | Forme normalisée d'un nom, utilisée pour la comparaison.                                   |
 
 ---
 
@@ -74,13 +74,13 @@ dépôt. C'est un tableau JSON trié par `id` croissant, contenant exactement 10
 
 ```ts
 type Pokemon = {
-  id: number;          // numéro national, 1..1025, unique, sans trou dans la série
-  nameFr: string;      // nom d'affichage français, ex. "Pikachu", "M. Mime"
-  nameEn: string;      // nom d'affichage anglais, ex. "Pikachu", "Mr. Mime"
-  slugFr: string;      // normalizeName(nameFr)
-  slugEn: string;      // normalizeName(nameEn)
-  generation: number;  // 1..9
-  spriteUrl: string;   // URL absolue de l'artwork officiel
+  id: number; // numéro national, 1..1025, unique, sans trou dans la série
+  nameFr: string; // nom d'affichage français, ex. "Pikachu", "M. Mime"
+  nameEn: string; // nom d'affichage anglais, ex. "Pikachu", "Mr. Mime"
+  slugFr: string; // normalizeName(nameFr)
+  slugEn: string; // normalizeName(nameEn)
+  generation: number; // 1..9
+  spriteUrl: string; // URL absolue de l'artwork officiel
 };
 ```
 
@@ -99,16 +99,16 @@ textuelles** sont locales. Le jeu reste jouable si les images ne chargent pas : 
 Ces bornes sont normatives et servent à construire les pools sans relire le dataset :
 
 | Gén | Premier id | Dernier id | Nombre |
-|---:|---:|---:|---:|
-| 1 | 1 | 151 | 151 |
-| 2 | 152 | 251 | 100 |
-| 3 | 252 | 386 | 135 |
-| 4 | 387 | 493 | 107 |
-| 5 | 494 | 649 | 156 |
-| 6 | 650 | 721 | 72 |
-| 7 | 722 | 809 | 88 |
-| 8 | 810 | 905 | 96 |
-| 9 | 906 | 1025 | 120 |
+| --: | ---------: | ---------: | -----: |
+|   1 |          1 |        151 |    151 |
+|   2 |        152 |        251 |    100 |
+|   3 |        252 |        386 |    135 |
+|   4 |        387 |        493 |    107 |
+|   5 |        494 |        649 |    156 |
+|   6 |        650 |        721 |     72 |
+|   7 |        722 |        809 |     88 |
+|   8 |        810 |        905 |     96 |
+|   9 |        906 |       1025 |    120 |
 
 ### 4.3 Script d'import
 
@@ -138,18 +138,18 @@ invariants sur le fichier versionné, à chaque exécution de la suite de tests.
 Ces cas doivent être couverts par des tests explicites, car ils cassent une normalisation
 naïve :
 
-| `nameFr` | `slugFr` | Piège |
-|---|---|---|
-| Nidoran♀ (#29) | `nidoranf` | Caractère de genre. |
-| Nidoran♂ (#32) | `nidoranm` | Idem, doit se distinguer du précédent. |
-| M. Mime (#122) | `mmime` | Point et espace. |
-| Canarticho (#83) — `nameEn` Farfetch'd | `farfetchd` | Apostrophe droite ou typographique. |
-| Ho-Oh (#250) | `hooh` | Trait d'union. |
-| Porygon-Z (#474) | `porygonz` | Trait d'union et lettre isolée. |
-| Type:0 (#772) | `type0` | Deux-points et chiffre. |
-| Tapu Koko (#785) | `tapukoko` | Espace. |
-| Mime Jr. (#439) | `mimejr` | Point final. |
-| Étourmi (#396) | `etourmi` | Accent en tête de nom. |
+| `nameFr`                               | `slugFr`    | Piège                                  |
+| -------------------------------------- | ----------- | -------------------------------------- |
+| Nidoran♀ (#29)                         | `nidoranf`  | Caractère de genre.                    |
+| Nidoran♂ (#32)                         | `nidoranm`  | Idem, doit se distinguer du précédent. |
+| M. Mime (#122)                         | `mmime`     | Point et espace.                       |
+| Canarticho (#83) — `nameEn` Farfetch'd | `farfetchd` | Apostrophe droite ou typographique.    |
+| Ho-Oh (#250)                           | `hooh`      | Trait d'union.                         |
+| Porygon-Z (#474)                       | `porygonz`  | Trait d'union et lettre isolée.        |
+| Type:0 (#772)                          | `type0`     | Deux-points et chiffre.                |
+| Tapu Koko (#785)                       | `tapukoko`  | Espace.                                |
+| Mime Jr. (#439)                        | `mimejr`    | Point final.                           |
+| Étourmi (#396)                         | `etourmi`   | Accent en tête de nom.                 |
 
 ---
 
@@ -185,10 +185,10 @@ même graine.
 ```ts
 // Hachage FNV-1a 32 bits
 function fnv1a32(input: string): number {
-  let h = 0x811c9dc5;               // 2166136261
+  let h = 0x811c9dc5; // 2166136261
   for (let i = 0; i < input.length; i++) {
     h ^= input.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);   // 16777619
+    h = Math.imul(h, 0x01000193); // 16777619
   }
   return h >>> 0;
 }
@@ -206,7 +206,7 @@ function mulberry32(seed: number): () => number {
 
 // Tirage sans remise : Fisher-Yates partiel
 function pickTargets(poolIds: number[], count: number, rng: () => number): number[] {
-  const a = [...poolIds];                     // poolIds est trié croissant
+  const a = [...poolIds]; // poolIds est trié croissant
   const n = Math.min(count, a.length);
   for (let i = 0; i < n; i++) {
     const j = i + Math.floor(rng() * (a.length - i));
@@ -220,11 +220,11 @@ L'appel se fait toujours par `pickTargets(poolIds, roundCount, mulberry32(fnv1a3
 
 Graines selon le mode :
 
-| Mode | Graine |
-|---|---|
-| Solo classique | `solo:` + 16 caractères hexadécimaux aléatoires (`crypto.getRandomValues`) |
-| Défi du jour | `daily:YYYY-MM-DD` — date **UTC** du jour |
-| Multijoueur | `room:{CODE}:{gameId}` — `gameId` = UUID v4 régénéré à chaque partie de la room |
+| Mode           | Graine                                                                          |
+| -------------- | ------------------------------------------------------------------------------- |
+| Solo classique | `solo:` + 16 caractères hexadécimaux aléatoires (`crypto.getRandomValues`)      |
+| Défi du jour   | `daily:YYYY-MM-DD` — date **UTC** du jour                                       |
+| Multijoueur    | `room:{CODE}:{gameId}` — `gameId` = UUID v4 régénéré à chaque partie de la room |
 
 ### 5.3 Score
 
@@ -233,7 +233,7 @@ const MAX_SCORE = 1000;
 const DECAY = 10;
 
 function scoreForAnswer(targetId: number, answerId: number | null, span: number): number {
-  if (answerId === null) return 0;                 // pas de réponse ou temps écoulé
+  if (answerId === null) return 0; // pas de réponse ou temps écoulé
   const gap = Math.abs(answerId - targetId);
   return Math.round(MAX_SCORE * Math.exp((-DECAY * gap) / span));
 }
@@ -241,10 +241,10 @@ function scoreForAnswer(targetId: number, answerId: number | null, span: number)
 
 Valeurs de référence, à figer dans les tests :
 
-| Pool | span | écart 0 | 1 | 5 | 15 | 50 | 100 | 400 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|
-| Gén 1 | 151 | 1000 | 936 | 718 | 370 | 36 | 1 | 0 |
-| National | 1025 | 1000 | 990 | 952 | 864 | 614 | 377 | 20 |
+| Pool     | span | écart 0 |   1 |   5 |  15 |  50 | 100 | 400 |
+| -------- | ---: | ------: | --: | --: | --: | --: | --: | --: |
+| Gén 1    |  151 |    1000 | 936 | 718 | 370 |  36 |   1 |   0 |
+| National | 1025 |    1000 | 990 | 952 | 864 | 614 | 377 |  20 |
 
 Le score d'une partie est la somme des scores de manche. Le maximum théorique d'une partie
 de 10 manches est donc 10 000.
@@ -279,10 +279,10 @@ export function normalizeName(input: string): string {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")  // retire les diacritiques combinants
-    .replace(/\u2640/g, "f")           // signe femelle
-    .replace(/\u2642/g, "m")           // signe male
-    .replace(/[^a-z0-9]/g, "");        // retire espaces, points, tirets, apostrophes
+    .replace(/[\u0300-\u036f]/g, "") // retire les diacritiques combinants
+    .replace(/\u2640/g, "f") // signe femelle
+    .replace(/\u2642/g, "m") // signe male
+    .replace(/[^a-z0-9]/g, ""); // retire espaces, points, tirets, apostrophes
 }
 ```
 
@@ -322,13 +322,13 @@ obligatoirement par l'autocomplétion, ce qui rend la distance d'édition inutil
 
 ### 6.3 Clavier
 
-| Touche | Effet |
-|---|---|
-| Caractère | Filtre et ouvre la liste |
-| `↓` / `↑` | Déplace la sélection active, boucle aux extrémités |
-| `Entrée` | Sélectionne la suggestion active ; si un Pokémon est déjà sélectionné, valide la réponse |
-| `Échap` | Ferme la liste sans effacer la saisie ; une seconde pression efface la saisie |
-| `Tab` | Ferme la liste et sort du champ |
+| Touche    | Effet                                                                                    |
+| --------- | ---------------------------------------------------------------------------------------- |
+| Caractère | Filtre et ouvre la liste                                                                 |
+| `↓` / `↑` | Déplace la sélection active, boucle aux extrémités                                       |
+| `Entrée`  | Sélectionne la suggestion active ; si un Pokémon est déjà sélectionné, valide la réponse |
+| `Échap`   | Ferme la liste sans effacer la saisie ; une seconde pression efface la saisie            |
+| `Tab`     | Ferme la liste et sort du champ                                                          |
 
 Le champ garde le focus automatiquement au début de chaque manche.
 
@@ -392,12 +392,12 @@ https://<hôte>/daily
 Les paliers de couleur par manche sont normatifs :
 
 | Points | Symbole |
-|---|---|
-| = 1000 | 🟦 |
-| ≥ 700 | 🟩 |
-| ≥ 400 | 🟨 |
-| ≥ 150 | 🟧 |
-| < 150 | ⬛ |
+| ------ | ------- |
+| = 1000 | 🟦      |
+| ≥ 700  | 🟩      |
+| ≥ 400  | 🟨      |
+| ≥ 150  | 🟧      |
+| < 150  | ⬛      |
 
 ---
 
@@ -440,13 +440,13 @@ lobby ──room:start──▶ countdown ──(3 s)──▶ round ──┬�
                                                      (manche suivante) ──┘
 ```
 
-| État | Description |
-|---|---|
-| `lobby` | Les joueurs arrivent, l'hôte règle la partie. |
-| `countdown` | Décompte de 3 secondes avant la première manche. |
-| `round` | La cible est affichée, le chrono tourne, les réponses sont acceptées. |
-| `reveal` | 6 secondes de tableau comparatif, puis manche suivante ou fin. |
-| `finished` | Classement final ; l'hôte peut relancer, ce qui ramène au lobby. |
+| État        | Description                                                           |
+| ----------- | --------------------------------------------------------------------- |
+| `lobby`     | Les joueurs arrivent, l'hôte règle la partie.                         |
+| `countdown` | Décompte de 3 secondes avant la première manche.                      |
+| `round`     | La cible est affichée, le chrono tourne, les réponses sont acceptées. |
+| `reveal`    | 6 secondes de tableau comparatif, puis manche suivante ou fin.        |
+| `finished`  | Classement final ; l'hôte peut relancer, ce qui ramène au lobby.      |
 
 Seul l'hôte peut modifier les réglages, démarrer et relancer. Les réglages sont verrouillés
 hors de l'état `lobby`.
@@ -459,7 +459,7 @@ hors de l'état `lobby`.
 2. Chaque joueur envoie au plus un `round:answer`. Le serveur accepte la réponse si :
    `status === "round"`, `roundIndex` correspond, le joueur n'a pas déjà répondu,
    `pokemonId` appartient au pool, et `Date.now() ≤ roundStartedAt + roundDurationMs +
-   GRACE_MS` (avec `GRACE_MS = 1500`, pour ne pas pénaliser la latence réseau).
+GRACE_MS` (avec `GRACE_MS = 1500`, pour ne pas pénaliser la latence réseau).
 3. `responseTimeMs` = `min(Date.now() − roundStartedAt, roundDurationMs)`.
 4. À chaque réponse acceptée, le serveur diffuse `round:answered { playerId }` — les autres
    voient qui a déjà répondu, **jamais quoi**.
@@ -501,15 +501,15 @@ deux premiers critères partagent le même `rank` affiché, mais restent ordonn�
 
 ### 8.8 Limites et garde-fous
 
-| Paramètre | Valeur |
-|---|---|
-| Joueurs par room | 2 minimum pour démarrer, 8 maximum |
-| Rooms simultanées par processus | 500 (au-delà : `SERVER_BUSY`) |
-| Durée de vie d'une room vide | 5 minutes |
-| Durée de vie absolue d'une room | 3 heures |
-| Débit par socket | 20 événements par 10 secondes |
-| Dépassements de débit avant déconnexion | 3 |
-| Taille maximale d'un message entrant | 4 Ko |
+| Paramètre                               | Valeur                             |
+| --------------------------------------- | ---------------------------------- |
+| Joueurs par room                        | 2 minimum pour démarrer, 8 maximum |
+| Rooms simultanées par processus         | 500 (au-delà : `SERVER_BUSY`)      |
+| Durée de vie d'une room vide            | 5 minutes                          |
+| Durée de vie absolue d'une room         | 3 heures                           |
+| Débit par socket                        | 20 événements par 10 secondes      |
+| Dépassements de débit avant déconnexion | 3                                  |
+| Taille maximale d'un message entrant    | 4 Ko                               |
 
 Rejoindre une room dont le `status` n'est pas `lobby` est refusé avec
 `GAME_IN_PROGRESS` — on n'entre pas en cours de partie. Il faut attendre la fin, ou l'hôte
@@ -528,7 +528,7 @@ compilation des deux côtés.
 
 ```ts
 export type GameSettings = {
-  generations: number[];                  // 1..9, uniques, triées, au moins une
+  generations: number[]; // 1..9, uniques, triées, au moins une
   roundDurationMs: 10000 | 15000 | 25000;
   roundCount: 5 | 10 | 15;
 };
@@ -541,22 +541,22 @@ export type PlayerPublic = {
   connected: boolean;
   isHost: boolean;
   score: number;
-  hasAnswered: boolean;                   // pour la manche en cours
+  hasAnswered: boolean; // pour la manche en cours
 };
 
 export type RoomState = {
   code: string;
   status: RoomStatus;
   settings: GameSettings;
-  players: PlayerPublic[];                // ordre d'arrivée
-  roundIndex: number;                     // -1 hors partie, sinon 0-based
+  players: PlayerPublic[]; // ordre d'arrivée
+  roundIndex: number; // -1 hors partie, sinon 0-based
   roundCount: number;
 };
 
 export type RoundResult = {
   playerId: string;
   nickname: string;
-  pokemonId: number | null;               // null = pas de réponse
+  pokemonId: number | null; // null = pas de réponse
   gap: number | null;
   points: number;
   responseTimeMs: number | null;
@@ -575,28 +575,28 @@ export type Ack<T> = { ok: true; data: T } | { ok: false; code: ErrorCode; messa
 
 ### 9.2 Client → serveur
 
-| Événement | Charge utile | Réponse (ack) | Contraintes |
-|---|---|---|---|
-| `room:create` | `{ nickname, settings }` | `{ roomCode, playerId, playerToken, state }` | pseudo et réglages valides |
-| `room:join` | `{ roomCode, nickname }` | `{ roomCode, playerId, playerToken, state }` | room en `lobby`, non pleine |
-| `room:rejoin` | `{ roomCode, playerId, playerToken }` | `{ state }` | token correspondant |
-| `room:leave` | `{}` | `{}` | — |
-| `room:settings` | `{ settings }` | `{ state }` | hôte, état `lobby` |
-| `room:start` | `{}` | `{}` | hôte, état `lobby`, ≥ 2 joueurs connectés |
-| `room:playAgain` | `{}` | `{ state }` | hôte, état `finished` |
-| `round:answer` | `{ roundIndex, pokemonId }` | `{ accepted: true }` | voir 8.5, point 2 |
+| Événement        | Charge utile                          | Réponse (ack)                                | Contraintes                               |
+| ---------------- | ------------------------------------- | -------------------------------------------- | ----------------------------------------- |
+| `room:create`    | `{ nickname, settings }`              | `{ roomCode, playerId, playerToken, state }` | pseudo et réglages valides                |
+| `room:join`      | `{ roomCode, nickname }`              | `{ roomCode, playerId, playerToken, state }` | room en `lobby`, non pleine               |
+| `room:rejoin`    | `{ roomCode, playerId, playerToken }` | `{ state }`                                  | token correspondant                       |
+| `room:leave`     | `{}`                                  | `{}`                                         | —                                         |
+| `room:settings`  | `{ settings }`                        | `{ state }`                                  | hôte, état `lobby`                        |
+| `room:start`     | `{}`                                  | `{}`                                         | hôte, état `lobby`, ≥ 2 joueurs connectés |
+| `room:playAgain` | `{}`                                  | `{ state }`                                  | hôte, état `finished`                     |
+| `round:answer`   | `{ roundIndex, pokemonId }`           | `{ accepted: true }`                         | voir 8.5, point 2                         |
 
 ### 9.3 Serveur → client
 
-| Événement | Charge utile | Quand |
-|---|---|---|
-| `room:state` | `RoomState` | à chaque changement d'effectif, de réglages ou d'état |
-| `game:countdown` | `{ startsAt, serverNow }` | au démarrage, avant la manche 1 |
-| `round:start` | `{ roundIndex, roundCount, targetId, endsAt, serverNow }` | ouverture d'une manche |
-| `round:answered` | `{ playerId }` | une réponse a été acceptée |
-| `round:reveal` | `{ roundIndex, target: Pokemon, results: RoundResult[], standings: Standing[], revealEndsAt, serverNow }` | fin d'une manche |
-| `game:end` | `{ standings: Standing[], history: RoundResult[][] }` | après la dernière révélation |
-| `room:closed` | `{ reason: "expired" \| "empty" \| "shutdown" }` | destruction de la room |
+| Événement        | Charge utile                                                                                              | Quand                                                 |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| `room:state`     | `RoomState`                                                                                               | à chaque changement d'effectif, de réglages ou d'état |
+| `game:countdown` | `{ startsAt, serverNow }`                                                                                 | au démarrage, avant la manche 1                       |
+| `round:start`    | `{ roundIndex, roundCount, targetId, endsAt, serverNow }`                                                 | ouverture d'une manche                                |
+| `round:answered` | `{ playerId }`                                                                                            | une réponse a été acceptée                            |
+| `round:reveal`   | `{ roundIndex, target: Pokemon, results: RoundResult[], standings: Standing[], revealEndsAt, serverNow }` | fin d'une manche                                      |
+| `game:end`       | `{ standings: Standing[], history: RoundResult[][] }`                                                     | après la dernière révélation                          |
+| `room:closed`    | `{ reason: "expired" \| "empty" \| "shutdown" }`                                                          | destruction de la room                                |
 
 `round:start` ne contient **que** le numéro cible, jamais le nom ni le sprite du Pokémon
 cible : ils n'arrivent qu'avec `round:reveal`. Un joueur qui inspecte le trafic réseau ne
@@ -631,20 +631,20 @@ nécessaire, et le client se connecte à Socket.IO sans URL absolue.
 
 ### 10.2 Versions
 
-| Outil | Version minimale |
-|---|---|
-| Node.js | 22 LTS |
-| pnpm | 9 |
-| TypeScript | 5.6 |
-| React | 19 |
-| Vite | 6 |
-| Tailwind CSS | 4 |
-| React Router | 7 |
-| Express | 4.21 |
-| Socket.IO / socket.io-client | 4.8 |
-| Vitest | 2 |
-| Testing Library (React) | 16 |
-| Playwright | 1.48 |
+| Outil                        | Version minimale |
+| ---------------------------- | ---------------- |
+| Node.js                      | 22 LTS           |
+| pnpm                         | 9                |
+| TypeScript                   | 5.6              |
+| React                        | 19               |
+| Vite                         | 6                |
+| Tailwind CSS                 | 4                |
+| React Router                 | 7                |
+| Express                      | 4.21             |
+| Socket.IO / socket.io-client | 4.8              |
+| Vitest                       | 2                |
+| Testing Library (React)      | 16               |
+| Playwright                   | 1.48             |
 
 TypeScript est en `strict: true`, avec `noUncheckedIndexedAccess` et
 `exactOptionalPropertyTypes`. ESLint et Prettier sont configurés à la racine et appliqués
@@ -719,24 +719,24 @@ pokemon-find/
 
 ### 10.4 Scripts racine
 
-| Script | Effet |
-|---|---|
-| `pnpm dev` | Lance en parallèle le serveur (`tsx watch`, port 3000) et Vite (port 5173, proxy `/socket.io` vers 3000) |
-| `pnpm build` | Compile `shared`, puis `web` (Vite), puis `server` (tsc) |
-| `pnpm test` | Vitest sur les trois paquets |
-| `pnpm test:e2e` | Playwright |
-| `pnpm lint` | ESLint + vérification Prettier |
-| `pnpm typecheck` | `tsc --noEmit` sur les trois paquets |
-| `pnpm dataset:build` | Régénère `pokemon.json` (manuel, réseau requis) |
+| Script               | Effet                                                                                                    |
+| -------------------- | -------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`           | Lance en parallèle le serveur (`tsx watch`, port 3000) et Vite (port 5173, proxy `/socket.io` vers 3000) |
+| `pnpm build`         | Compile `shared`, puis `web` (Vite), puis `server` (tsc)                                                 |
+| `pnpm test`          | Vitest sur les trois paquets                                                                             |
+| `pnpm test:e2e`      | Playwright                                                                                               |
+| `pnpm lint`          | ESLint + vérification Prettier                                                                           |
+| `pnpm typecheck`     | `tsc --noEmit` sur les trois paquets                                                                     |
+| `pnpm dataset:build` | Régénère `pokemon.json` (manuel, réseau requis)                                                          |
 
 ### 10.5 API HTTP
 
-| Route | Méthode | Réponse |
-|---|---|---|
-| `/healthz` | GET | `200 { status: "ok", uptimeMs, rooms, players }` |
-| `/socket.io/*` | — | géré par Socket.IO |
-| `/assets/*` | GET | fichiers statiques du build front, `Cache-Control: public, max-age=31536000, immutable` |
-| toute autre route | GET | `index.html`, `Cache-Control: no-cache` (fallback SPA) |
+| Route             | Méthode | Réponse                                                                                 |
+| ----------------- | ------- | --------------------------------------------------------------------------------------- |
+| `/healthz`        | GET     | `200 { status: "ok", uptimeMs, rooms, players }`                                        |
+| `/socket.io/*`    | —       | géré par Socket.IO                                                                      |
+| `/assets/*`       | GET     | fichiers statiques du build front, `Cache-Control: public, max-age=31536000, immutable` |
+| toute autre route | GET     | `index.html`, `Cache-Control: no-cache` (fallback SPA)                                  |
 
 Aucune autre API HTTP n'existe : le jeu passe intégralement par le WebSocket.
 
@@ -746,14 +746,14 @@ Aucune autre API HTTP n'existe : le jeu passe intégralement par le WebSocket.
 
 ### 11.1 Routes
 
-| Route | Écran |
-|---|---|
-| `/` | Accueil : pseudo, et quatre entrées — Solo, Défi du jour, Créer une room, Rejoindre |
-| `/solo` | Configuration de la partie solo |
-| `/solo/play` | Partie solo en cours (redirige vers `/solo` si aucun état en mémoire) |
-| `/daily` | Défi du jour (ou son résultat si déjà joué aujourd'hui) |
-| `/join` | Saisie d'un code de room |
-| `/room/:code` | Lobby, partie et classement final d'une room |
+| Route         | Écran                                                                               |
+| ------------- | ----------------------------------------------------------------------------------- |
+| `/`           | Accueil : pseudo, et quatre entrées — Solo, Défi du jour, Créer une room, Rejoindre |
+| `/solo`       | Configuration de la partie solo                                                     |
+| `/solo/play`  | Partie solo en cours (redirige vers `/solo` si aucun état en mémoire)               |
+| `/daily`      | Défi du jour (ou son résultat si déjà joué aujourd'hui)                             |
+| `/join`       | Saisie d'un code de room                                                            |
+| `/room/:code` | Lobby, partie et classement final d'une room                                        |
 
 L'état d'une partie solo vit en mémoire React et n'est pas persisté : un rechargement de
 page abandonne la partie en cours. Un `beforeunload` avertit le joueur.
@@ -765,18 +765,18 @@ l'élément dominant de l'écran de jeu.
 
 ```css
 :root {
-  --bg:        #0A0B0F;
-  --surface:   #14161D;
-  --surface-2: #1D202A;
-  --border:    #2A2E3A;
-  --text:      #E8EAF0;
-  --text-dim:  #9AA0AE;
-  --accent:    #FFCB05;  /* jaune Pokémon — actions principales, numéro cible */
-  --accent-2:  #3D7BFF;  /* bleu — réponse exacte, éléments multijoueur */
-  --success:   #35D07F;
-  --warn:      #FFB020;
-  --danger:    #FF4D5E;
-  --radius:    14px;
+  --bg: #0a0b0f;
+  --surface: #14161d;
+  --surface-2: #1d202a;
+  --border: #2a2e3a;
+  --text: #e8eaf0;
+  --text-dim: #9aa0ae;
+  --accent: #ffcb05; /* jaune Pokémon — actions principales, numéro cible */
+  --accent-2: #3d7bff; /* bleu — réponse exacte, éléments multijoueur */
+  --success: #35d07f;
+  --warn: #ffb020;
+  --danger: #ff4d5e;
+  --radius: 14px;
   --radius-sm: 8px;
 }
 ```
@@ -839,7 +839,7 @@ insuffisant.
 
 ### 11.7 Accessibilité
 
-- L'autocomplétion suit le motif ARIA *combobox* : `role="combobox"`,
+- L'autocomplétion suit le motif ARIA _combobox_ : `role="combobox"`,
   `aria-expanded`, `aria-controls`, `aria-activedescendant`, liste en `role="listbox"`,
   éléments en `role="option"` avec `aria-selected`.
 - Le résultat de chaque manche est annoncé dans une région `aria-live="polite"` :
@@ -989,19 +989,19 @@ commande.
 
 ### 13.3 Variables d'environnement
 
-| Variable | Défaut | Rôle |
-|---|---|---|
-| `PORT` | `3000` | Port d'écoute HTTP et WebSocket |
-| `NODE_ENV` | `production` | — |
-| `LOG_LEVEL` | `info` | `debug` \| `info` \| `warn` \| `error` |
-| `CORS_ORIGIN` | *(vide)* | Vide = même origine uniquement. À ne renseigner que si le front est servi séparément |
-| `ROUND_REVEAL_MS` | `6000` | Durée de la révélation |
-| `COUNTDOWN_MS` | `3000` | Décompte avant la manche 1 |
-| `ANSWER_GRACE_MS` | `1500` | Tolérance de latence sur la fin de manche |
-| `RECONNECT_GRACE_MS` | `60000` | Délai avant retrait d'un joueur déconnecté |
-| `ROOM_EMPTY_TTL_MS` | `300000` | Destruction d'une room vide |
-| `ROOM_MAX_AGE_MS` | `10800000` | Durée de vie absolue d'une room |
-| `MAX_ROOMS` | `500` | Rooms simultanées |
+| Variable             | Défaut       | Rôle                                                                                 |
+| -------------------- | ------------ | ------------------------------------------------------------------------------------ |
+| `PORT`               | `3000`       | Port d'écoute HTTP et WebSocket                                                      |
+| `NODE_ENV`           | `production` | —                                                                                    |
+| `LOG_LEVEL`          | `info`       | `debug` \| `info` \| `warn` \| `error`                                               |
+| `CORS_ORIGIN`        | _(vide)_     | Vide = même origine uniquement. À ne renseigner que si le front est servi séparément |
+| `ROUND_REVEAL_MS`    | `6000`       | Durée de la révélation                                                               |
+| `COUNTDOWN_MS`       | `3000`       | Décompte avant la manche 1                                                           |
+| `ANSWER_GRACE_MS`    | `1500`       | Tolérance de latence sur la fin de manche                                            |
+| `RECONNECT_GRACE_MS` | `60000`      | Délai avant retrait d'un joueur déconnecté                                           |
+| `ROOM_EMPTY_TTL_MS`  | `300000`     | Destruction d'une room vide                                                          |
+| `ROOM_MAX_AGE_MS`    | `10800000`   | Durée de vie absolue d'une room                                                      |
+| `MAX_ROOMS`          | `500`        | Rooms simultanées                                                                    |
 
 Le serveur valide ces variables au démarrage et **refuse de démarrer** avec un message
 explicite si l'une est hors bornes. Un `.env.example` documenté est versionné.
@@ -1059,16 +1059,16 @@ Le projet est considéré comme conforme quand chacune de ces affirmations est v
 Ces points ont été tranchés pendant la conception ; les rouvrir demande une révision de ce
 document.
 
-| Décision | Raison |
-|---|---|
-| Numéro → nommer le Pokémon (et non l'inverse) | La saisie d'un nom est plus riche et permet l'autocomplétion ; deviner un nombre serait un jeu de hasard. |
-| Un seul essai par manche | Format identique en solo et en multi, comparaison directe des réponses, aucune règle d'égalité complexe. |
-| Chrono sans bonus de rapidité | La formule de score reste lisible ; le temps ne sert qu'au départage. |
-| Propositions restreintes au pool actif | Sans cette restriction, l'écart perd son sens : on pourrait répondre un Pokémon de Gén 9 sur une partie Gén 1. |
-| `span` plutôt que le nombre d'éléments au dénominateur | Rend le score cohérent pour des sélections de générations non contiguës. |
-| Décroissance exponentielle plutôt que linéaire | Une décroissance linéaire annule tout écart supérieur à 50 et cesse de discriminer ; l'exponentielle reste informative sur toute la plage. |
-| Serveur autoritaire, état en mémoire | Le multi doit être fiable ; la persistance, elle, n'apporte rien à un jeu entre amis. |
-| Aucun compte, aucune base de données | Réduit le périmètre, supprime toute donnée personnelle à protéger et toute sauvegarde à exploiter. |
-| Dataset local plutôt qu'appels à PokeAPI au runtime | Déterminisme, absence de latence, tests reproductibles, jeu insensible à une panne de l'API. |
-| Conteneur unique servant front et WebSocket | Même origine, donc aucun CORS ; un seul objet à déployer sur le serveur de l'utilisateur. |
-| Pas d'entrée en cours de partie dans une room | Un arrivant partirait avec un score de zéro sur les manches déjà jouées : la partie serait faussée. |
+| Décision                                               | Raison                                                                                                                                     |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Numéro → nommer le Pokémon (et non l'inverse)          | La saisie d'un nom est plus riche et permet l'autocomplétion ; deviner un nombre serait un jeu de hasard.                                  |
+| Un seul essai par manche                               | Format identique en solo et en multi, comparaison directe des réponses, aucune règle d'égalité complexe.                                   |
+| Chrono sans bonus de rapidité                          | La formule de score reste lisible ; le temps ne sert qu'au départage.                                                                      |
+| Propositions restreintes au pool actif                 | Sans cette restriction, l'écart perd son sens : on pourrait répondre un Pokémon de Gén 9 sur une partie Gén 1.                             |
+| `span` plutôt que le nombre d'éléments au dénominateur | Rend le score cohérent pour des sélections de générations non contiguës.                                                                   |
+| Décroissance exponentielle plutôt que linéaire         | Une décroissance linéaire annule tout écart supérieur à 50 et cesse de discriminer ; l'exponentielle reste informative sur toute la plage. |
+| Serveur autoritaire, état en mémoire                   | Le multi doit être fiable ; la persistance, elle, n'apporte rien à un jeu entre amis.                                                      |
+| Aucun compte, aucune base de données                   | Réduit le périmètre, supprime toute donnée personnelle à protéger et toute sauvegarde à exploiter.                                         |
+| Dataset local plutôt qu'appels à PokeAPI au runtime    | Déterminisme, absence de latence, tests reproductibles, jeu insensible à une panne de l'API.                                               |
+| Conteneur unique servant front et WebSocket            | Même origine, donc aucun CORS ; un seul objet à déployer sur le serveur de l'utilisateur.                                                  |
+| Pas d'entrée en cours de partie dans une room          | Un arrivant partirait avec un score de zéro sur les manches déjà jouées : la partie serait faussée.                                        |
