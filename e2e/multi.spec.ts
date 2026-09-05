@@ -75,6 +75,25 @@ test("un joueur qui recharge la page retrouve sa place et son score", async ({ b
   // page lobby (testée plus haut) affiche le pseudo en clair, mais pas la vue "round".
   await expect(host.getByTitle("Léa")).toBeVisible();
 
+  // Un écran retrouvé ne prouve pas qu'on peut encore jouer : on fait répondre la reconnectée
+  // et on vérifie côté hôte — donc via le serveur, pas via son propre client — que la réponse a
+  // bien été acceptée, avant de laisser la manche se terminer pour la retrouver dans le tableau
+  // de révélation avec sa réponse.
+  await guest.getByRole("combobox").fill("roucool");
+  await guest.keyboard.press("Enter");
+  await guest.keyboard.press("Enter");
+  await expect(host.getByLabel("Léa a répondu")).toBeVisible({ timeout: 5_000 });
+
+  await host.getByRole("combobox").fill("pikachu");
+  await host.keyboard.press("Enter");
+  await host.keyboard.press("Enter");
+  await expect(host.getByRole("table")).toBeVisible({ timeout: 20_000 });
+
+  const leaRow = host.getByRole("row").filter({ hasText: "Léa" });
+  await expect(leaRow).toBeVisible();
+  const leaCells = await leaRow.getByRole("cell").allInnerTexts();
+  expect(leaCells[1]).not.toBe("—");
+
   await hostContext.close();
   await guestContext.close();
 });
