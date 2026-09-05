@@ -17,4 +17,14 @@ describe("TargetNumber", () => {
     render(<TargetNumber id={25} maxId={151} />);
     expect(screen.getByLabelText("Numéro cible 25")).toBeInTheDocument();
   });
+
+  it("épingle la frontière : maxId = 999 rend 3 chiffres", () => {
+    render(<TargetNumber id={7} maxId={999} />);
+    expect(screen.getByText("007")).toBeInTheDocument();
+  });
+
+  it("épingle la frontière : maxId = 1000 rend 4 chiffres", () => {
+    render(<TargetNumber id={7} maxId={1000} />);
+    expect(screen.getByText("0007")).toBeInTheDocument();
+  });
 });
