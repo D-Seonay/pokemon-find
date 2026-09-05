@@ -34,21 +34,32 @@ describe("PokemonCombobox", () => {
     for (const option of screen.getAllByRole("option")) {
       expect(option.getAttribute("aria-label")).toBeNull();
     }
+    // Les id générés par React (`useId()`) préfixent chaque id ci-dessous (ex.
+    // "_r_2_-option-0"). Ce préfixe est un compteur interne à React, ne porte aucune
+    // information sur le Pokémon, et son écriture en base 32 peut accidentellement
+    // épeler "25" (ex. au 69e rendu séquentiel dans ce fichier) sans rapport avec une
+    // fuite. On le retranche donc avant de chercher le numéro national, pour que
+    // l'assertion ne dépende pas du nombre de rendus qui la précèdent.
+    const idPrefix = listbox.id;
     // Aucun id d'élément de la liste ne doit être dérivé du numéro national.
     for (const element of listbox.querySelectorAll("[id]")) {
-      expect(element.id).not.toContain("25");
+      expect(element.id.replace(idPrefix, "")).not.toContain("25");
     }
     // Le combobox ne doit pas non plus le révéler via aria-activedescendant.
     const activeDescendant = input.getAttribute("aria-activedescendant");
     if (activeDescendant !== null) {
-      expect(activeDescendant).not.toContain("25");
+      expect(activeDescendant.replace(idPrefix, "")).not.toContain("25");
     }
     // Filet de sécurité : sérialise tout le HTML de la liste et vérifie l'absence du
-    // numéro national dans ce qui reste, hors `src` du sprite. L'URL de l'artwork
-    // contient légitimement le numéro (ex. ".../25.png") — c'est le seul compromis
-    // assumé (voir brief) ; on le neutralise explicitement plutôt que d'affaiblir
-    // l'assertion globale.
-    const sanitizedHtml = listbox.outerHTML.replace(/src="[^"]*"/g, 'src="REDACTED"');
+    // numéro national dans ce qui reste, hors `src` du sprite et hors préfixe d'id
+    // React. L'URL de l'artwork contient légitimement le numéro (ex. ".../25.png") —
+    // c'est le seul compromis assumé (voir brief) ; le préfixe d'id est retranché pour
+    // la raison expliquée ci-dessus. On neutralise les deux explicitement plutôt que
+    // d'affaiblir l'assertion globale.
+    const sanitizedHtml = listbox.outerHTML
+      .replace(/src="[^"]*"/g, 'src="REDACTED"')
+      .split(idPrefix)
+      .join("");
     expect(sanitizedHtml).not.toContain("25");
   });
 
