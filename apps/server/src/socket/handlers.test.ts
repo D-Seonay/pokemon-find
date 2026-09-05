@@ -268,6 +268,115 @@ describe("handlers Socket.IO", () => {
     expect(restored.roundIndex).toBe(started.roundIndex);
   });
 
+  it("restaure la révélation pour un joueur qui se reconnecte pendant la révélation", async () => {
+    const host = client();
+    const created = await emit<"room:create", JoinPayload>(host, "room:create", {
+      nickname: "Mathéo",
+      settings: { ...DEFAULT_SETTINGS, roundCount: 5 },
+    });
+    if (!created.ok) throw new Error("création échouée");
+    const guest = client();
+    const joined = await emit<"room:join", JoinPayload>(guest, "room:join", {
+      roomCode: created.data.roomCode,
+      nickname: "Léa",
+    });
+    if (!joined.ok) throw new Error("jointure échouée");
+
+    // Connecté à l'avance : la fenêtre de révélation ne dure que 100 ms dans ces tests
+    // (ROUND_REVEAL_MS ci-dessus), la reconnexion ne doit donc pas payer le coût de la
+    // poignée de main WebSocket au moment critique.
+    const back = client();
+    await new Promise<void>((resolve) => {
+      if (back.connected) resolve();
+      else back.once("connect", () => resolve());
+    });
+
+    type RevealPayload = {
+      roundIndex: number;
+      target: { id: number; nameFr: string };
+      standings: Array<{ playerId: string; score: number }>;
+    };
+    const hostReveal = once<RevealPayload>(host, "round:reveal");
+    await emit(host, "room:start", {});
+    const started = await once<{ roundIndex: number; targetId: number }>(host, "round:start");
+    await emit(host, "round:answer", {
+      roundIndex: started.roundIndex,
+      pokemonId: started.targetId,
+    });
+    await emit(guest, "round:answer", {
+      roundIndex: started.roundIndex,
+      pokemonId: started.targetId === 1 ? 2 : 1,
+    });
+
+    const restoredReveal = once<RevealPayload>(back, "round:reveal");
+    const reveal = await hostReveal;
+    const ack = await emit<"room:rejoin", { state: RoomState }>(back, "room:rejoin", {
+      roomCode: created.data.roomCode,
+      playerId: joined.data.playerId,
+      playerToken: joined.data.playerToken,
+    });
+    expect(ack.ok).toBe(true);
+
+    const restored = await restoredReveal;
+    // Vérifie que la révélation restaurée correspond bien à la manche qui vient de se
+    // terminer (et pas, par exemple, à la manche suivante à cause d'un décalage entre
+    // `currentRoundIndex` et `history`) : le numéro de manche ET le Pokémon cible doivent
+    // coïncider avec ce que l'hôte a reçu.
+    expect(restored.roundIndex).toBe(started.roundIndex);
+    expect(restored.target.id).toBe(started.targetId);
+    expect(typeof restored.target.nameFr).toBe("string");
+    expect(restored.standings).toEqual(reveal.standings);
+  });
+
+  it("restaure le classement final pour un joueur qui se reconnecte après la fin de partie", async () => {
+    const host = client();
+    const created = await emit<"room:create", JoinPayload>(host, "room:create", {
+      nickname: "Mathéo",
+      settings: { ...DEFAULT_SETTINGS, generations: [1], roundCount: 5 },
+    });
+    if (!created.ok) throw new Error("création échouée");
+    const guest = client();
+    const joined = await emit<"room:join", JoinPayload>(guest, "room:join", {
+      roomCode: created.data.roomCode,
+      nickname: "Léa",
+    });
+    if (!joined.ok) throw new Error("jointure échouée");
+
+    type EndPayload = {
+      standings: Array<{ playerId: string; score: number }>;
+      history: unknown[];
+    };
+    const ended = once<EndPayload>(host, "game:end");
+    await emit(host, "room:start", {});
+
+    for (let index = 0; index < 5; index++) {
+      const started = await once<{ roundIndex: number; targetId: number }>(host, "round:start");
+      await emit(host, "round:answer", {
+        roundIndex: started.roundIndex,
+        pokemonId: started.targetId,
+      });
+      await emit(guest, "round:answer", {
+        roundIndex: started.roundIndex,
+        pokemonId: started.targetId === 1 ? 2 : 1,
+      });
+    }
+
+    const result = await ended;
+
+    const back = client();
+    const restoredEnd = once<EndPayload>(back, "game:end");
+    const ack = await emit<"room:rejoin", { state: RoomState }>(back, "room:rejoin", {
+      roomCode: created.data.roomCode,
+      playerId: joined.data.playerId,
+      playerToken: joined.data.playerToken,
+    });
+    expect(ack.ok).toBe(true);
+
+    const restored = await restoredEnd;
+    expect(restored.standings).toEqual(result.standings);
+    expect(restored.history).toEqual(result.history);
+  });
+
   it("refuse une reconnexion avec un mauvais jeton", async () => {
     const host = client();
     const created = await emit<"room:create", JoinPayload>(host, "room:create", {
