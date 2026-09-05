@@ -126,6 +126,36 @@ describe("boucle de jeu", () => {
     );
   });
 
+  it("accepte une réponse après la durée nominale mais dans la tolérance de latence", async () => {
+    const graceTimings: RoomTimings = {
+      countdownMs: 10,
+      revealMs: 10,
+      answerGraceMs: 100,
+      allAnsweredDelayMs: 5,
+      roundDurationMsOverride: 40,
+    };
+    const graceEvents: RoomListeners = {
+      onState: vi.fn(),
+      onCountdown: vi.fn(),
+      onRoundStart: vi.fn(),
+      onAnswered: vi.fn(),
+      onReveal: vi.fn(),
+      onEnd: vi.fn(),
+    };
+    const graceRoom = new Room("EFGH", graceTimings, graceEvents, () => SEED);
+    const host = graceRoom.addPlayer("Mathéo");
+    graceRoom.addPlayer("Léa");
+    graceRoom.start(host.playerId);
+    await wait(graceTimings.countdownMs + 20);
+    // Attend au-delà de la durée nominale de la manche, mais toujours dans la fenêtre de grâce.
+    await wait(graceTimings.roundDurationMsOverride! + 20);
+
+    expect(() => graceRoom.answer(host.playerId, 0, targets[0]!)).not.toThrow();
+    expect(graceRoom.status).toBe("round");
+
+    graceRoom.dispose();
+  });
+
   it("rejette un Pokémon hors du pool actif", async () => {
     const host = seat("Mathéo");
     const guest = seat("Léa");
@@ -173,6 +203,8 @@ describe("boucle de jeu", () => {
     const reveal = vi.mocked(events.onReveal).mock.calls.at(-1)?.[0];
     expect(reveal?.standings[0]?.playerId).toBe(host.playerId);
     expect(reveal?.standings[0]?.rank).toBe(1);
+    expect(reveal?.standings[1]?.playerId).toBe(guest.playerId);
+    expect(reveal?.standings[1]?.rank).toBe(2);
   });
 
   it("revient au lobby avec les scores remis à zéro sur relance", async () => {

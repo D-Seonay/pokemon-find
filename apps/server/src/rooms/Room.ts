@@ -299,7 +299,7 @@ export class Room {
       serverNow: this.roundStartedAt,
     });
     this.emitState();
-    this.schedule(() => this.closeRound(), this.roundDurationMs);
+    this.schedule(() => this.closeRound(), this.roundDurationMs + this.timings.answerGraceMs);
   }
 
   private closeRound(): void {
