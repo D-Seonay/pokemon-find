@@ -21,19 +21,25 @@ d'acceptation) est disponible dans
 
 ```bash
 pnpm install
+pnpm dev
 ```
 
-Il n'existe pas de script `dev` unique à la racine : lancer le serveur et le front dans
-deux terminaux séparés.
+`pnpm dev` lance en parallèle le serveur (`tsx watch`, avec rechargement automatique) et
+le front (Vite, `http://localhost:5173`). Le front est servi séparément du serveur en
+développement ; c'est en production, via le conteneur, que le même processus sert le
+front construit et le WebSocket sur un seul port.
+
+**Attention** : `packages/shared` n'a pas de script de compilation à la volée (« watch »),
+et le serveur comme le front le consomment via son `dist/` déjà compilé. Ni `pnpm dev`
+ni le lancement séparé de chaque application ne recompile `shared` automatiquement.
+Après une modification dans `packages/shared/src`, il faut la reconstruire à la main :
 
 ```bash
-pnpm -F @pkfind/server dev   # serveur + WebSocket, tsx watch
-pnpm -F @pkfind/web dev      # front Vite, rechargement à chaud, http://localhost:5173
+pnpm -F @pkfind/shared build
 ```
 
-Le front est servi séparément du serveur en développement ; c'est en production, via le
-conteneur, que le même processus sert le front construit et le WebSocket sur un seul
-port.
+sans quoi le serveur et le front continuent de fonctionner avec l'ancien code compilé,
+silencieusement.
 
 ## Variables d'environnement
 

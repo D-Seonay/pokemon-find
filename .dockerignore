@@ -3,6 +3,7 @@ node_modules
 **/dist
 .git
 .github
+.superpowers
 docs
 e2e
 test-results
