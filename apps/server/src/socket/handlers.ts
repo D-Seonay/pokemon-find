@@ -150,8 +150,9 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
         run(() => {
           const code = socket.data.roomCode;
           const id = socket.data.playerId;
-          if (code && id) store.tryGet(code)?.removePlayer(id);
           socket.data = {};
+          if (code && id) store.tryGet(code)?.removePlayer(id);
+          if (code) void socket.leave(code);
           return null;
         }),
       );
@@ -159,6 +160,7 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
 
     socket.on("disconnect", () => {
       violations.delete(socket.id);
+      allow.release(socket.id);
       const { roomCode, playerId } = socket.data;
       if (!roomCode || !playerId) return;
       const room = store.tryGet(roomCode);

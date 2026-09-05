@@ -1,6 +1,9 @@
-export function createRateLimiter(max: number, windowMs: number): (key: string) => boolean {
+export type RateLimiter = ((key: string) => boolean) & { release: (key: string) => void };
+
+export function createRateLimiter(max: number, windowMs: number): RateLimiter {
   const hits = new Map<string, number[]>();
-  return (key: string): boolean => {
+
+  function allow(key: string): boolean {
     const now = Date.now();
     const recent = (hits.get(key) ?? []).filter((at) => now - at < windowMs);
     if (recent.length >= max) {
@@ -10,5 +13,11 @@ export function createRateLimiter(max: number, windowMs: number): (key: string) 
     recent.push(now);
     hits.set(key, recent);
     return true;
-  };
+  }
+
+  return Object.assign(allow, {
+    release: (key: string): void => {
+      hits.delete(key);
+    },
+  });
 }

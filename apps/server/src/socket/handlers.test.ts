@@ -248,4 +248,51 @@ describe("handlers Socket.IO", () => {
     });
     expect(ack).toMatchObject({ ok: false, code: "INVALID_TOKEN" });
   });
+
+  it("quitte la room et cesse de recevoir ses diffusions", async () => {
+    const host = client();
+    const created = await emit<"room:create", JoinPayload>(host, "room:create", {
+      nickname: "Mathéo",
+      settings: DEFAULT_SETTINGS,
+    });
+    if (!created.ok) throw new Error("création échouée");
+    const guest = client();
+    const joined = await emit<"room:join", JoinPayload>(guest, "room:join", {
+      roomCode: created.data.roomCode,
+      nickname: "Léa",
+    });
+    if (!joined.ok) throw new Error("jointure échouée");
+
+    const leaveAck = await emit(guest, "room:leave", {});
+    expect(leaveAck).toMatchObject({ ok: true });
+
+    let receivedAfterLeave = false;
+    guest.on("room:state", () => {
+      receivedAfterLeave = true;
+    });
+
+    const nextHostState = once<RoomState>(host, "room:state");
+    await emit(client(), "room:join", {
+      roomCode: created.data.roomCode,
+      nickname: "Sacha",
+    });
+    await nextHostState;
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(receivedAfterLeave).toBe(false);
+  });
+
+  it("déconnecte un socket après trois violations de la limite de débit", async () => {
+    const host = client();
+    const disconnected = new Promise<void>((resolve) => {
+      host.on("disconnect", () => resolve());
+    });
+
+    for (let index = 0; index < 30; index++) {
+      host.emit("room:leave", {}, () => undefined);
+    }
+
+    await disconnected;
+    expect(host.connected).toBe(false);
+  });
 });

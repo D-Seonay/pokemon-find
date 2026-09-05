@@ -16,15 +16,17 @@ export class RoomStore {
   constructor(
     private readonly config: Config,
     private readonly io: AppServer,
+    /** Seam de test : permet d'injecter un générateur pour forcer des collisions. */
+    private readonly codeGenerator: () => string = generateCode,
   ) {}
 
   create(): Room {
     if (this.rooms.size >= this.config.maxRooms) throw new RoomError("SERVER_BUSY");
 
-    let code = generateCode();
+    let code = this.codeGenerator();
     for (let attempt = 0; this.rooms.has(code); attempt++) {
       if (attempt >= 10) throw new RoomError("CODE_EXHAUSTED");
-      code = generateCode();
+      code = this.codeGenerator();
     }
 
     const room = new Room(
