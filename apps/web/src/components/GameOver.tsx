@@ -1,4 +1,4 @@
-import { type GameSettings, pokemonById, tryPokemonById } from "@pkfind/shared";
+import { type GameSettings, gapBetween, pokemonById, tryPokemonById } from "@pkfind/shared";
 import { useEffect, useState } from "react";
 import type { SoloRound } from "../game/useSoloGame.js";
 import { readBest, saveBest } from "../storage/scores.js";
@@ -62,7 +62,9 @@ export function GameOver({
                 <td>#{round.targetId}</td>
                 <td>{pokemonById(round.targetId).nameFr}</td>
                 <td>{answer?.nameFr ?? "—"}</td>
-                <td>{round.answerId === null ? "—" : Math.abs(round.answerId - round.targetId)}</td>
+                <td>
+                  {round.answerId === null ? "—" : gapBetween(round.targetId, round.answerId)}
+                </td>
                 <td>{round.points}</td>
               </tr>
             );

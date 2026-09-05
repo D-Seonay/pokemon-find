@@ -62,7 +62,12 @@ export function SoloSetup() {
         </div>
       </fieldset>
 
-      <Button onClick={() => navigate("/solo/play", { state: settings })}>Lancer</Button>
+      <Button
+        disabled={settings.generations.length === 0}
+        onClick={() => navigate("/solo/play", { state: settings })}
+      >
+        Lancer
+      </Button>
     </section>
   );
 }

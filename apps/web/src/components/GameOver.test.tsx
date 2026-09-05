@@ -5,7 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SoloRound } from "../game/useSoloGame.js";
 import { GameOver } from "./GameOver.js";
 
-afterEach(() => localStorage.clear());
+afterEach(() => {
+  localStorage.clear();
+  vi.restoreAllMocks();
+});
 
 const rounds: SoloRound[] = [{ targetId: 1, answerId: 1, points: 800, responseTimeMs: 1000 }];
 
@@ -24,21 +27,39 @@ describe("GameOver", () => {
     expect(screen.getByText(/nouveau record/i)).toBeInTheDocument();
   });
 
-  it("le statut de record ne varie pas entre deux rendus identiques", () => {
+  // Le test précédent comparait le texte affiché avant/après un `rerender` — mais avec la
+  // version fautive (écriture pendant le rendu), le statut se stabilise dès le premier montage
+  // (`saveBest` a déjà écrit ; les deux valeurs comparées valent alors `false`) : ce test-là ne
+  // pouvait pas échouer sur la régression qu'il était censé épingler.
+  //
+  // Espionner `Storage.prototype.setItem` ne marche pas non plus : `saveBest` n'écrit que sur
+  // un score strictement supérieur, donc dès que le score courant est déjà enregistré (ce qui
+  // est le cas après le tout premier montage, fautif ou non), aucune version n'écrit à nouveau
+  // sur un rerender à props identiques — le nombre d'écritures reste plat des deux côtés, ce
+  // que j'ai vérifié en le faisant échouer sur la version fautive avant de le corriger.
+  //
+  // Le vrai point de divergence est la LECTURE, pas l'écriture. `readBest` et `saveBest`
+  // appellent chacun `readJson` (donc `Storage.prototype.getItem`) à chaque invocation. La
+  // version corrigée ne lit qu'au montage : l'état initial paresseux de `useState` n'est pas
+  // ré-exécuté sur un rerender (React ignore l'initialiseur une fois l'état créé), et l'effet
+  // ne se redéclenche pas non plus puisque ses dépendances (`settings`, `total`) n'ont pas
+  // changé. La version fautive, elle, lit dans le corps du rendu — donc à chaque rendu, y
+  // compris un rerender à props identiques.
+  it("un second rendu identique ne déclenche pas de lecture supplémentaire du stockage", () => {
+    const getItemSpy = vi.spyOn(Storage.prototype, "getItem");
     const { rerender } = render(
       <StrictMode>
         <GameOver rounds={rounds} settings={DEFAULT_SETTINGS} onReplay={vi.fn()} />
       </StrictMode>,
     );
-    const first = screen.queryByText(/nouveau record/i) !== null;
+    const callsAfterMount = getItemSpy.mock.calls.length;
 
     rerender(
       <StrictMode>
         <GameOver rounds={rounds} settings={DEFAULT_SETTINGS} onReplay={vi.fn()} />
       </StrictMode>,
     );
-    const second = screen.queryByText(/nouveau record/i) !== null;
 
-    expect(second).toBe(first);
+    expect(getItemSpy.mock.calls.length).toBe(callsAfterMount);
   });
 });

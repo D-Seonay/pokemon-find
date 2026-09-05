@@ -1,4 +1,4 @@
-import { type Pool, pokemonById, tryPokemonById } from "@pkfind/shared";
+import { type Pool, gapBetween, pokemonById, tryPokemonById } from "@pkfind/shared";
 import type { SoloRound } from "../game/useSoloGame.js";
 import { PokemonSprite } from "./PokemonSprite.js";
 
@@ -13,7 +13,7 @@ export function RoundResult({
 }) {
   const target = pokemonById(round.targetId);
   const answer = round.answerId === null ? null : tryPokemonById(round.answerId);
-  const gap = round.answerId === null ? null : Math.abs(round.answerId - round.targetId);
+  const gap = round.answerId === null ? null : gapBetween(round.targetId, round.answerId);
 
   return (
     <section
