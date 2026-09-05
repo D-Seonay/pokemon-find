@@ -6,3 +6,4 @@ export * from "./domain/names.js";
 export * from "./domain/settings.js";
 export * from "./domain/daily.js";
 export * from "./data/pokemon.js";
+export * from "./protocol/events.js";
