@@ -32,8 +32,12 @@ function readInt(
 ): number {
   const raw = env[key];
   if (raw === undefined || raw === "") return fallback;
-  const value = Number(raw);
-  if (!Number.isInteger(value) || value < min || value > max) {
+  const trimmed = raw.trim();
+  if (!/^-?\d+$/.test(trimmed)) {
+    throw new ConfigError(`${key} doit être un entier entre ${min} et ${max} (reçu "${raw}").`);
+  }
+  const value = Number(trimmed);
+  if (value < min || value > max) {
     throw new ConfigError(`${key} doit être un entier entre ${min} et ${max} (reçu "${raw}").`);
   }
   return value;

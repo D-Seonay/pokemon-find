@@ -1,9 +1,21 @@
 import { createServer } from "node:http";
-import { loadConfig } from "./config.js";
+import { ConfigError, loadConfig, type Config } from "./config.js";
 import { createHttpApp } from "./http.js";
 import { log, setLogLevel } from "./log.js";
 
-const config = loadConfig();
+function loadConfigOrExit(): Config {
+  try {
+    return loadConfig();
+  } catch (error) {
+    if (error instanceof ConfigError) {
+      process.stderr.write(`Configuration invalide : ${error.message}\n`);
+      process.exit(1);
+    }
+    throw error;
+  }
+}
+
+const config = loadConfigOrExit();
 setLogLevel(config.logLevel);
 
 // Le registre des rooms et le branchement Socket.IO arrivent aux tâches 16 à 18.

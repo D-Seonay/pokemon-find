@@ -68,7 +68,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   NOT_IN_ROOM: "Tu n'es pas dans cette room.",
   NOT_ENOUGH_PLAYERS: "Il faut au moins 2 joueurs connectés pour démarrer.",
   INVALID_NICKNAME: "Pseudo invalide : 2 à 16 caractères, lettres et chiffres.",
-  INVALID_SETTINGS: "Réglages de partie invalides.",
+  INVALID_SETTINGS:
+    "Réglages de partie invalides : vérifie les générations et la durée des manches choisies.",
   INVALID_CODE: "Ce code contient un caractère invalide.",
   ALREADY_ANSWERED: "Tu as déjà répondu à cette manche.",
   ROUND_CLOSED: "Trop tard, la manche est terminée.",
@@ -77,7 +78,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   RATE_LIMITED: "Trop de requêtes, ralentis un peu.",
   SERVER_BUSY: "Le serveur est saturé, réessaie dans un instant.",
   CODE_EXHAUSTED: "Impossible de générer un code, réessaie.",
-  INTERNAL: "Erreur interne du serveur.",
+  INTERNAL: "Une erreur est survenue, réessaie dans un instant.",
 };
 
 export type Ack<T> = { ok: true; data: T } | { ok: false; code: ErrorCode; message: string };

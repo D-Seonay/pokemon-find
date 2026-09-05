@@ -31,7 +31,11 @@ export function createHttpApp(
     app.use(express.static(webDir, { index: false, maxAge: 0 }));
   }
 
-  app.get("*", (_request, response) => {
+  app.get("*", (request, response) => {
+    if (request.path.startsWith("/assets/")) {
+      response.status(404).end();
+      return;
+    }
     if (!existsSync(indexFile)) {
       response.status(404).type("text/plain").send("Front non construit");
       return;

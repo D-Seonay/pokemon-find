@@ -37,6 +37,12 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ MAX_ROOMS: "0" })).toThrow(ConfigError);
   });
 
+  it("refuse les formats numériques ambigus", () => {
+    expect(() => loadConfig({ PORT: "0x10" })).toThrow(ConfigError);
+    expect(() => loadConfig({ PORT: "3e3" })).toThrow(ConfigError);
+    expect(() => loadConfig({ PORT: "3000.5" })).toThrow(ConfigError);
+  });
+
   it("refuse un niveau de journalisation inconnu", () => {
     expect(() => loadConfig({ LOG_LEVEL: "verbose" })).toThrow(ConfigError);
   });
