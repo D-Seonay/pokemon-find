@@ -1,4 +1,12 @@
-import { DAILY_SETTINGS, TIER_EMOJI, dailyKey, dailySeed, shareText, tierOf } from "@pkfind/shared";
+import {
+  DAILY_SETTINGS,
+  MAX_SCORE,
+  TIER_EMOJI,
+  dailyKey,
+  dailySeed,
+  shareText,
+  tierOf,
+} from "@pkfind/shared";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "../components/Button.js";
@@ -12,18 +20,30 @@ import { KEYS, readJson, writeJson } from "../storage/local.js";
 type DailyEntry = { date: string; total: number; points: number[] };
 
 export function Daily() {
-  const today = dailyKey(new Date());
+  // Figé une seule fois au montage : la date du jour et la graine du défi doivent provenir
+  // du même instant, sinon un franchissement de minuit UTC en cours de partie ferait dériver
+  // l'une par rapport à l'autre (voir DailyBoard, qui dérive sa graine de cette même valeur).
+  const [now] = useState(() => new Date());
+  const today = dailyKey(now);
   const [entry, setEntry] = useState<DailyEntry | null>(() => {
     const stored = readJson<DailyEntry | null>(KEYS.daily, null);
     return stored && stored.date === today ? stored : null;
   });
 
   if (entry) return <DailyResult entry={entry} />;
-  return <DailyBoard onFinish={setEntry} today={today} />;
+  return <DailyBoard now={now} onFinish={setEntry} today={today} />;
 }
 
-function DailyBoard({ today, onFinish }: { today: string; onFinish: (entry: DailyEntry) => void }) {
-  const game = useSoloGame(DAILY_SETTINGS, dailySeed(new Date()));
+function DailyBoard({
+  today,
+  now,
+  onFinish,
+}: {
+  today: string;
+  now: Date;
+  onFinish: (entry: DailyEntry) => void;
+}) {
+  const game = useSoloGame(DAILY_SETTINGS, dailySeed(now));
 
   useEffect(() => {
     if (game.phase !== "finished") return;
@@ -65,7 +85,7 @@ function DailyBoard({ today, onFinish }: { today: string; onFinish: (entry: Dail
 function DailyResult({ entry }: { entry: DailyEntry }) {
   const [copied, setCopied] = useState(false);
   const emojis = entry.points.map((points) => TIER_EMOJI[tierOf(points)]).join("");
-  const max = entry.points.length * 1000;
+  const max = entry.points.length * MAX_SCORE;
 
   async function copy(): Promise<void> {
     const text = shareText({

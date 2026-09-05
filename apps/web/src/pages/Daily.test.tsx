@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { KEYS, writeJson } from "../storage/local.js";
@@ -44,5 +44,21 @@ describe("Daily", () => {
     writeJson(KEYS.daily, { date: "2026-09-03", total: 100, points: [100] });
     renderDaily();
     expect(screen.getByRole("combobox")).toBeInTheDocument();
+  });
+
+  it("ne change pas la cible en cours si l'horloge franchit minuit UTC pendant une manche", () => {
+    vi.setSystemTime(new Date("2026-09-04T23:59:59Z"));
+    renderDaily();
+    const before = screen.getByLabelText(/Numéro cible/).getAttribute("aria-label");
+
+    // Le chrono de useSoloGame se rafraîchit toutes les 100 ms ; on avance après avoir
+    // franchi minuit UTC pour vérifier que la cible en cours ne change pas de manche.
+    vi.setSystemTime(new Date("2026-09-05T00:00:05Z"));
+    act(() => {
+      vi.advanceTimersByTime(500);
+    });
+
+    const after = screen.getByLabelText(/Numéro cible/).getAttribute("aria-label");
+    expect(after).toBe(before);
   });
 });

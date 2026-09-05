@@ -28,6 +28,9 @@ test("le défi du jour affiche son résultat au second passage", async ({ page }
   }
   await expect(page.getByRole("button", { name: /Partager/ })).toBeVisible();
 
+  // Ce test prouve la persistance au rechargement, pas l'expiration par date : ce dernier
+  // cas (une entrée mémorisée datée d'hier relance une partie) est couvert par le test
+  // unitaire Daily.test.tsx:62-66.
   await page.reload();
   await expect(page.getByRole("combobox")).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Partager/ })).toBeVisible();
