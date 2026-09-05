@@ -10,6 +10,7 @@
     "build": "pnpm -F @pkfind/shared build && pnpm -F @pkfind/web build && pnpm -F @pkfind/server build",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "playwright test",
     "typecheck": "pnpm -r exec tsc --noEmit",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
@@ -17,6 +18,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.12.0",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^22.7.0",
     "@vitest/coverage-v8": "^2.1.0",
     "eslint": "^9.12.0",

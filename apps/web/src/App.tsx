@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import { Daily } from "./pages/Daily.js";
 import { Home } from "./pages/Home.js";
 import { SoloGame } from "./pages/SoloGame.js";
 import { SoloSetup } from "./pages/SoloSetup.js";
@@ -10,6 +11,7 @@ export function App() {
         <Route path="/" element={<Home />} />
         <Route path="/solo" element={<SoloSetup />} />
         <Route path="/solo/play" element={<SoloGame />} />
+        <Route path="/daily" element={<Daily />} />
         <Route path="*" element={<Home />} />
       </Routes>
     </main>
