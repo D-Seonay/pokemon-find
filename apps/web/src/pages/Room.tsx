@@ -91,6 +91,15 @@ export function Room() {
     return <p className="mono text-center text-6xl">Ça commence…</p>;
   }
 
+  if (state.status !== "lobby") {
+    // Une manche, une révélation ou une fin de partie est en cours côté serveur mais les
+    // données précises (round/reveal/final) ne sont pas encore arrivées côté client — par
+    // exemple juste après une reconnexion, avant que l'événement de phase associé ne soit
+    // traité. Ne jamais retomber sur l'écran du lobby dans ce cas : il exposerait un
+    // bouton "Démarrer" actionnable en pleine partie.
+    return <p className="mono text-center text-6xl">Reconnexion…</p>;
+  }
+
   return (
     <section className="flex flex-col gap-6">
       <h1 className="text-3xl font-extrabold">Room</h1>

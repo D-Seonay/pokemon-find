@@ -234,6 +234,40 @@ describe("handlers Socket.IO", () => {
     expect(ack.ok).toBe(true);
   });
 
+  it("restaure la manche en cours pour un joueur qui se reconnecte pendant une manche", async () => {
+    const host = client();
+    const created = await emit<"room:create", JoinPayload>(host, "room:create", {
+      nickname: "Mathéo",
+      settings: { ...DEFAULT_SETTINGS, roundCount: 5 },
+    });
+    if (!created.ok) throw new Error("création échouée");
+    const guest = client();
+    const joined = await emit<"room:join", JoinPayload>(guest, "room:join", {
+      roomCode: created.data.roomCode,
+      nickname: "Léa",
+    });
+    if (!joined.ok) throw new Error("jointure échouée");
+
+    await emit(host, "room:start", {});
+    const started = await once<{ roundIndex: number; targetId: number }>(host, "round:start");
+
+    guest.close();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const back = client();
+    const restoredRoundStart = once<{ roundIndex: number; targetId: number }>(back, "round:start");
+    const ack = await emit<"room:rejoin", { state: RoomState }>(back, "room:rejoin", {
+      roomCode: created.data.roomCode,
+      playerId: joined.data.playerId,
+      playerToken: joined.data.playerToken,
+    });
+    expect(ack.ok).toBe(true);
+
+    const restored = await restoredRoundStart;
+    expect(restored.targetId).toBe(started.targetId);
+    expect(restored.roundIndex).toBe(started.roundIndex);
+  });
+
   it("refuse une reconnexion avec un mauvais jeton", async () => {
     const host = client();
     const created = await emit<"room:create", JoinPayload>(host, "room:create", {

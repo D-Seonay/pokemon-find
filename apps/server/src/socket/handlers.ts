@@ -1,4 +1,4 @@
-import { type Ack, ERROR_MESSAGES, type ErrorCode } from "@pkfind/shared";
+import { type Ack, ERROR_MESSAGES, type ErrorCode, pokemonById } from "@pkfind/shared";
 import type { Config } from "../config.js";
 import { log } from "../log.js";
 import { normalizeCode } from "../rooms/codes.js";
@@ -102,6 +102,20 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
           room.rejoin(playerId, playerToken);
           socket.data = { roomCode: room.code, playerId };
           void socket.join(room.code);
+
+          // room:state seul ramène le lobby : un reconnecté en pleine manche, en pleine
+          // révélation ou après la fin de partie a aussi besoin de l'événement de phase
+          // correspondant, adressé à lui seul (pas de diffusion à toute la room).
+          const snapshot = room.snapshotForRejoin();
+          if (snapshot.kind === "round") {
+            socket.emit("round:start", snapshot.payload);
+          } else if (snapshot.kind === "reveal") {
+            const { targetId, ...rest } = snapshot.payload;
+            socket.emit("round:reveal", { ...rest, target: pokemonById(targetId) });
+          } else if (snapshot.kind === "end") {
+            socket.emit("game:end", snapshot.payload);
+          }
+
           return { state: room.toState() };
         }),
       );

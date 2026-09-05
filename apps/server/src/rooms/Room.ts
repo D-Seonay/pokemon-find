@@ -30,6 +30,39 @@ export class RoomError extends Error {
   }
 }
 
+/**
+ * Ce qu'il faut renvoyer à un socket qui vient de se reconnecter (`room:rejoin`) pour
+ * qu'il retrouve l'écran de jeu courant plutôt que le lobby : `room:state` seul ne
+ * transporte ni le numéro de la manche en cours, ni le résultat de la révélation, ni le
+ * classement final. `endsAt`/`revealEndsAt`/`serverNow` sont ceux à l'instant présent,
+ * pas ceux de l'émission d'origine, pour que le compte à rebours du client reconnecté
+ * démarre juste.
+ */
+export type RejoinSnapshot =
+  | {
+      kind: "round";
+      payload: {
+        roundIndex: number;
+        roundCount: number;
+        targetId: number;
+        endsAt: number;
+        serverNow: number;
+      };
+    }
+  | {
+      kind: "reveal";
+      payload: {
+        roundIndex: number;
+        targetId: number;
+        results: RoundResult[];
+        standings: Standing[];
+        revealEndsAt: number;
+        serverNow: number;
+      };
+    }
+  | { kind: "end"; payload: { standings: Standing[]; history: RoundResult[][] } }
+  | { kind: "none" };
+
 export type RoomTimings = {
   countdownMs: number;
   revealMs: number;
@@ -82,6 +115,7 @@ export class Room {
   private targets: number[] = [];
   private history: RoundResult[][] = [];
   private roundStartedAt = 0;
+  private revealStartedAt = 0;
   private timer: NodeJS.Timeout | null = null;
   protected currentRoundIndex = -1;
 
@@ -255,6 +289,47 @@ export class Room {
     };
   }
 
+  /**
+   * Ce qu'un socket qui vient de se reconnaître (`room:rejoin`) doit recevoir en plus de
+   * `room:state` pour retrouver l'écran de jeu courant. Ne transporte jamais le Pokémon
+   * cible tant que la manche est en cours : seul le numéro (`targetId`) sort d'ici,
+   * exactement comme `round:start` — la résolution du Pokémon reste le travail de
+   * l'appelant, au moment de la révélation.
+   */
+  snapshotForRejoin(): RejoinSnapshot {
+    const now = Date.now();
+    if (this.state === "round") {
+      return {
+        kind: "round",
+        payload: {
+          roundIndex: this.currentRoundIndex,
+          roundCount: this.targets.length,
+          targetId: this.targets[this.currentRoundIndex]!,
+          endsAt: this.roundStartedAt + this.roundDurationMs,
+          serverNow: now,
+        },
+      };
+    }
+    if (this.state === "reveal") {
+      const results = this.history[this.currentRoundIndex]!;
+      return {
+        kind: "reveal",
+        payload: {
+          roundIndex: this.currentRoundIndex,
+          targetId: this.targets[this.currentRoundIndex]!,
+          results: [...results].sort((a, b) => b.points - a.points),
+          standings: this.standings(),
+          revealEndsAt: this.revealStartedAt + this.timings.revealMs,
+          serverNow: now,
+        },
+      };
+    }
+    if (this.state === "finished") {
+      return { kind: "end", payload: { standings: this.standings(), history: this.history } };
+    }
+    return { kind: "none" };
+  }
+
   private uniqueNickname(nickname: string): string {
     if (!NICKNAME_PATTERN.test(nickname)) throw new RoomError("INVALID_NICKNAME");
     const taken = new Set(this.players.map((player) => player.nickname));
@@ -337,6 +412,7 @@ export class Room {
     this.history.push(results);
     this.state = "reveal";
     const now = Date.now();
+    this.revealStartedAt = now;
     this.listeners.onReveal({
       roundIndex: this.currentRoundIndex,
       targetId,
