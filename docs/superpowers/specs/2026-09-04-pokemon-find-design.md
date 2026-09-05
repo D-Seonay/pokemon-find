@@ -994,6 +994,7 @@ commande.
 | `PORT`               | `3000`       | Port d'écoute HTTP et WebSocket                                                      |
 | `NODE_ENV`           | `production` | —                                                                                    |
 | `LOG_LEVEL`          | `info`       | `debug` \| `info` \| `warn` \| `error`                                               |
+| `WEB_DIR` | `../../web/dist` | Chemin du front construit, résolu depuis le fichier serveur exécuté |
 | `CORS_ORIGIN`        | _(vide)_     | Vide = même origine uniquement. À ne renseigner que si le front est servi séparément |
 | `ROUND_REVEAL_MS`    | `6000`       | Durée de la révélation                                                               |
 | `COUNTDOWN_MS`       | `3000`       | Décompte avant la manche 1                                                           |
