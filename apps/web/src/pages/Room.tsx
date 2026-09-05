@@ -28,7 +28,20 @@ export function Room() {
     return () => clearInterval(handle);
   }, []);
 
+  // Un joueur qui navigue ailleurs reste sinon marqué `connected` côté serveur jusqu'à
+  // l'expiration de la fenêtre de grâce : un fantôme dans le lobby qui ne répond jamais,
+  // forçant chaque manche à courir jusqu'à son terme puisque la clôture anticipée exige que
+  // tous les joueurs connectés aient répondu.
+  useEffect(() => {
+    return () => room.actions.leave();
+  }, []);
+
   if (room.closed) return <p>La room a été fermée ({room.closed}).</p>;
+  // Erreur fatale : uniquement issue du chemin de jointure (room introuvable, pleine,
+  // partie déjà commencée, jeton invalide…). Le joueur ne peut vraiment pas continuer, donc
+  // elle remplace tout l'écran pour le reste de la session. Toute erreur d'action
+  // (répondre en retard, redémarrer une partie déjà lancée, etc.) est passagère et ne doit
+  // jamais produire cet écran mort : voir `room.actionError` plus bas.
   if (room.error) return <p style={{ color: "var(--danger)" }}>{room.error}</p>;
   if (!room.state) return <p>Connexion…</p>;
 
@@ -36,114 +49,141 @@ export function Room() {
   const isHost = state.players.find((player) => player.id === room.playerId)?.isHost ?? false;
   const pool = buildPool(state.settings.generations);
 
-  if (room.final) {
-    return (
-      <section className="flex flex-col gap-4">
-        <h1 className="text-3xl font-extrabold">Classement final</h1>
-        <Scoreboard
-          standings={room.final.standings}
-          {...(room.playerId ? { highlightPlayerId: room.playerId } : {})}
-        />
-        {isHost && <Button onClick={room.actions.playAgain}>Rejouer</Button>}
-      </section>
-    );
-  }
+  function renderBody() {
+    if (room.final) {
+      return (
+        <section className="flex flex-col gap-4">
+          <h1 className="text-3xl font-extrabold">Classement final</h1>
+          <Scoreboard
+            standings={room.final.standings}
+            {...(room.playerId ? { highlightPlayerId: room.playerId } : {})}
+          />
+          {isHost && <Button onClick={room.actions.playAgain}>Rejouer</Button>}
+        </section>
+      );
+    }
 
-  if (room.reveal) {
-    return (
-      <MultiReveal target={room.reveal.target} results={room.reveal.results} maxId={pool.maxId} />
-    );
-  }
+    if (room.reveal) {
+      return (
+        <MultiReveal target={room.reveal.target} results={room.reveal.results} maxId={pool.maxId} />
+      );
+    }
 
-  if (room.round) {
+    if (room.round) {
+      return (
+        <section className="flex flex-col gap-4">
+          <header className="flex items-center justify-between">
+            <p className="mono text-[var(--text-dim)]">
+              Manche {room.round.roundIndex + 1} / {room.round.roundCount}
+            </p>
+            <ul className="flex gap-1">
+              {state.players.map((player) => (
+                <li
+                  key={player.id}
+                  title={player.nickname}
+                  aria-label={`${player.nickname} ${player.hasAnswered ? "a répondu" : "réfléchit"}`}
+                  className="h-3 w-3 rounded-full"
+                  style={{
+                    background: player.hasAnswered ? "var(--success)" : "var(--border)",
+                    opacity: player.connected ? 1 : 0.3,
+                  }}
+                />
+              ))}
+            </ul>
+          </header>
+          <Timer
+            remainingMs={room.round.localEndsAt - now}
+            totalMs={state.settings.roundDurationMs}
+          />
+          <TargetNumber id={room.round.targetId} maxId={pool.maxId} />
+          <PokemonCombobox pool={pool} onSubmit={(pokemon) => room.actions.answer(pokemon.id)} />
+        </section>
+      );
+    }
+
+    if (state.status === "countdown") {
+      return <p className="mono text-center text-6xl">Ça commence…</p>;
+    }
+
+    if (state.status !== "lobby") {
+      // Une manche, une révélation ou une fin de partie est en cours côté serveur mais les
+      // données précises (round/reveal/final) ne sont pas encore arrivées côté client — par
+      // exemple juste après une reconnexion, avant que l'événement de phase associé ne soit
+      // traité. Ne jamais retomber sur l'écran du lobby dans ce cas : il exposerait un
+      // bouton "Démarrer" actionnable en pleine partie.
+      return <p className="mono text-center text-6xl">Reconnexion…</p>;
+    }
+
     return (
-      <section className="flex flex-col gap-4">
-        <header className="flex items-center justify-between">
-          <p className="mono text-[var(--text-dim)]">
-            Manche {room.round.roundIndex + 1} / {room.round.roundCount}
+      <section className="flex flex-col gap-6">
+        <h1 className="text-3xl font-extrabold">Room</h1>
+        <p className="mono text-6xl tracking-[0.3em]">{state.code}</p>
+        <Button
+          variant="ghost"
+          onClick={() =>
+            void navigator.clipboard.writeText(`${window.location.origin}/room/${state.code}`)
+          }
+        >
+          Copier le lien
+        </Button>
+        <ul className="flex flex-col gap-2">
+          {state.players.map((player) => (
+            <li key={player.id} className="flex items-center gap-2">
+              <span style={{ opacity: player.connected ? 1 : 0.4 }}>{player.nickname}</span>
+              {player.isHost && <span aria-label="hôte">👑</span>}
+            </li>
+          ))}
+        </ul>
+        {isHost ? (
+          <GenerationPicker
+            value={state.settings.generations}
+            onChange={(generations) => room.actions.setSettings({ ...state.settings, generations })}
+          />
+        ) : (
+          <p className="text-[var(--text-dim)]">
+            Générations : {state.settings.generations.join(", ")} ·{" "}
+            {state.settings.roundDurationMs / 1000} s · {state.settings.roundCount} manches
           </p>
-          <ul className="flex gap-1">
-            {state.players.map((player) => (
-              <li
-                key={player.id}
-                title={player.nickname}
-                aria-label={`${player.nickname} ${player.hasAnswered ? "a répondu" : "réfléchit"}`}
-                className="h-3 w-3 rounded-full"
-                style={{
-                  background: player.hasAnswered ? "var(--success)" : "var(--border)",
-                  opacity: player.connected ? 1 : 0.3,
-                }}
-              />
-            ))}
-          </ul>
-        </header>
-        <Timer
-          remainingMs={room.round.localEndsAt - now}
-          totalMs={state.settings.roundDurationMs}
-        />
-        <TargetNumber id={room.round.targetId} maxId={pool.maxId} />
-        <PokemonCombobox pool={pool} onSubmit={(pokemon) => room.actions.answer(pokemon.id)} />
+        )}
+        {isHost && (
+          <>
+            <Button
+              disabled={state.players.filter((player) => player.connected).length < 2}
+              onClick={room.actions.start}
+            >
+              Démarrer
+            </Button>
+            {state.players.filter((player) => player.connected).length < 2 && (
+              <p className="text-sm text-[var(--text-dim)]">
+                Il faut au moins 2 joueurs connectés.
+              </p>
+            )}
+          </>
+        )}
       </section>
     );
-  }
-
-  if (state.status === "countdown") {
-    return <p className="mono text-center text-6xl">Ça commence…</p>;
-  }
-
-  if (state.status !== "lobby") {
-    // Une manche, une révélation ou une fin de partie est en cours côté serveur mais les
-    // données précises (round/reveal/final) ne sont pas encore arrivées côté client — par
-    // exemple juste après une reconnexion, avant que l'événement de phase associé ne soit
-    // traité. Ne jamais retomber sur l'écran du lobby dans ce cas : il exposerait un
-    // bouton "Démarrer" actionnable en pleine partie.
-    return <p className="mono text-center text-6xl">Reconnexion…</p>;
   }
 
   return (
-    <section className="flex flex-col gap-6">
-      <h1 className="text-3xl font-extrabold">Room</h1>
-      <p className="mono text-6xl tracking-[0.3em]">{state.code}</p>
-      <Button
-        variant="ghost"
-        onClick={() =>
-          void navigator.clipboard.writeText(`${window.location.origin}/room/${state.code}`)
-        }
-      >
-        Copier le lien
-      </Button>
-      <ul className="flex flex-col gap-2">
-        {state.players.map((player) => (
-          <li key={player.id} className="flex items-center gap-2">
-            <span style={{ opacity: player.connected ? 1 : 0.4 }}>{player.nickname}</span>
-            {player.isHost && <span aria-label="hôte">👑</span>}
-          </li>
-        ))}
-      </ul>
-      {isHost ? (
-        <GenerationPicker
-          value={state.settings.generations}
-          onChange={(generations) => room.actions.setSettings({ ...state.settings, generations })}
-        />
-      ) : (
-        <p className="text-[var(--text-dim)]">
-          Générations : {state.settings.generations.join(", ")} ·{" "}
-          {state.settings.roundDurationMs / 1000} s · {state.settings.roundCount} manches
+    <div className="flex flex-col gap-4">
+      {room.reconnecting && (
+        <p role="status" className="mono text-sm text-[var(--text-dim)]">
+          Reconnexion…
         </p>
       )}
-      {isHost && (
-        <>
-          <Button
-            disabled={state.players.filter((player) => player.connected).length < 2}
-            onClick={room.actions.start}
-          >
-            Démarrer
+      {room.actionError && (
+        <p
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[var(--danger)] px-4 py-2"
+          style={{ color: "var(--danger)" }}
+        >
+          <span>{room.actionError}</span>
+          <Button variant="ghost" onClick={room.actions.dismissActionError}>
+            Fermer
           </Button>
-          {state.players.filter((player) => player.connected).length < 2 && (
-            <p className="text-sm text-[var(--text-dim)]">Il faut au moins 2 joueurs connectés.</p>
-          )}
-        </>
+        </p>
       )}
-    </section>
+      {renderBody()}
+    </div>
   );
 }
