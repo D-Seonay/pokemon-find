@@ -164,6 +164,19 @@ export class Room {
     this.emitState();
   }
 
+  /** Applique des réglages à la création, avant qu'un hôte n'existe. */
+  updateSettingsUnchecked(settings: unknown): void {
+    try {
+      this.settings = validateSettings(settings);
+    } catch {
+      throw new RoomError("INVALID_SETTINGS");
+    }
+  }
+
+  isConnected(playerId: string): boolean {
+    return this.players.some((player) => player.id === playerId && player.connected);
+  }
+
   start(playerId: string): void {
     this.assertHost(playerId);
     if (this.state !== "lobby") throw new RoomError("GAME_IN_PROGRESS");

@@ -1,7 +1,11 @@
 import { createServer } from "node:http";
+import { Server } from "socket.io";
 import { ConfigError, loadConfig, type Config } from "./config.js";
 import { createHttpApp } from "./http.js";
 import { log, setLogLevel } from "./log.js";
+import { RoomStore } from "./rooms/RoomStore.js";
+import { registerHandlers } from "./socket/handlers.js";
+import type { AppServer } from "./socket/types.js";
 
 function loadConfigOrExit(): Config {
   try {
@@ -18,14 +22,26 @@ function loadConfigOrExit(): Config {
 const config = loadConfigOrExit();
 setLogLevel(config.logLevel);
 
-// Le registre des rooms et le branchement Socket.IO arrivent aux tâches 16 à 18.
-const app = createHttpApp(config, () => ({ rooms: 0, players: 0 }));
-const server = createServer(app);
+const httpServer = createServer();
+const io: AppServer = new Server(httpServer, {
+  maxHttpBufferSize: 4096,
+  ...(config.corsOrigin ? { cors: { origin: config.corsOrigin } } : {}),
+});
 
-server.listen(config.port, () => log.info("server_started", { port: config.port }));
+const store = new RoomStore(config, io);
+store.startPurge();
+registerHandlers(io, store, config);
+
+httpServer.on(
+  "request",
+  createHttpApp(config, () => store.stats()),
+);
+httpServer.listen(config.port, () => log.info("server_started", { port: config.port }));
 
 process.on("SIGTERM", () => {
   log.info("shutdown_requested");
-  server.close(() => process.exit(0));
+  store.destroyAll("shutdown");
+  store.stopPurge();
+  void io.close(() => httpServer.close(() => process.exit(0)));
   setTimeout(() => process.exit(1), 5000).unref();
 });
