@@ -1,4 +1,5 @@
 import { ALL_GENERATIONS } from "./generations.js";
+import { MAX_SCORE } from "./score.js";
 import type { GameSettings } from "./settings.js";
 
 export const DAILY_SETTINGS: GameSettings = {
@@ -18,7 +19,7 @@ export function dailySeed(date: Date): string {
 }
 
 export function tierOf(points: number): 0 | 1 | 2 | 3 | 4 {
-  if (points >= 1000) return 4;
+  if (points >= MAX_SCORE) return 4;
   if (points >= 700) return 3;
   if (points >= 400) return 2;
   if (points >= 150) return 1;
@@ -31,7 +32,7 @@ export function shareText(input: {
   points: readonly number[];
   url: string;
 }): string {
-  const max = input.points.length * 1000;
+  const max = input.points.length * MAX_SCORE;
   // toLocaleString("fr-FR") insère U+202F ou U+00A0 comme séparateur de milliers ;
   // on le normalise en espace ordinaire pour rendre le test stable entre versions de Node.
   const format = (value: number) => value.toLocaleString("fr-FR").replace(/[\u202f\u00a0]/g, " ");

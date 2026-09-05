@@ -1,4 +1,10 @@
-import { type GameSettings, gapBetween, pokemonById, tryPokemonById } from "@pkfind/shared";
+import {
+  type GameSettings,
+  MAX_SCORE,
+  gapBetween,
+  pokemonById,
+  tryPokemonById,
+} from "@pkfind/shared";
 import { useEffect, useState } from "react";
 import type { SoloRound } from "../game/useSoloGame.js";
 import { readBest, saveBest } from "../storage/scores.js";
@@ -35,7 +41,7 @@ export function GameOver({
     <section className="flex flex-col gap-4">
       <h1 className="text-3xl font-extrabold">Partie terminée</h1>
       <p className="mono text-5xl" style={{ color: "var(--accent)" }}>
-        {total} / {rounds.length * 1000}
+        {total} / {rounds.length * MAX_SCORE}
       </p>
       {isRecord ? (
         <p style={{ color: "var(--success)" }}>Nouveau record pour cette configuration.</p>
@@ -44,33 +50,35 @@ export function GameOver({
           <p className="text-[var(--text-dim)]">Votre record : {previousBest}</p>
         )
       )}
-      <table className="w-full text-left text-sm">
-        <thead className="text-[var(--text-dim)]">
-          <tr>
-            <th scope="col">Cible</th>
-            <th scope="col">Pokémon</th>
-            <th scope="col">Réponse</th>
-            <th scope="col">Écart</th>
-            <th scope="col">Points</th>
-          </tr>
-        </thead>
-        <tbody className="mono">
-          {rounds.map((round, index) => {
-            const answer = round.answerId === null ? null : tryPokemonById(round.answerId);
-            return (
-              <tr key={`${round.targetId}-${index}`}>
-                <td>#{round.targetId}</td>
-                <td>{pokemonById(round.targetId).nameFr}</td>
-                <td>{answer?.nameFr ?? "—"}</td>
-                <td>
-                  {round.answerId === null ? "—" : gapBetween(round.targetId, round.answerId)}
-                </td>
-                <td>{round.points}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="text-[var(--text-dim)]">
+            <tr>
+              <th scope="col">Cible</th>
+              <th scope="col">Pokémon</th>
+              <th scope="col">Réponse</th>
+              <th scope="col">Écart</th>
+              <th scope="col">Points</th>
+            </tr>
+          </thead>
+          <tbody className="mono">
+            {rounds.map((round, index) => {
+              const answer = round.answerId === null ? null : tryPokemonById(round.answerId);
+              return (
+                <tr key={`${round.targetId}-${index}`}>
+                  <td>#{round.targetId}</td>
+                  <td>{pokemonById(round.targetId).nameFr}</td>
+                  <td>{answer?.nameFr ?? "—"}</td>
+                  <td>
+                    {round.answerId === null ? "—" : gapBetween(round.targetId, round.answerId)}
+                  </td>
+                  <td>{round.points}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
       <Button onClick={onReplay}>Rejouer</Button>
     </section>
   );
