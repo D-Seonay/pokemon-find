@@ -425,6 +425,40 @@ describe("handlers Socket.IO", () => {
     expect(receivedAfterLeave).toBe(false);
   });
 
+  it("un payload non-objet sur room:join ne fait pas planter le serveur", async () => {
+    const ack = await emit(client(), "room:join", null);
+    expect(ack).toMatchObject({ ok: false, code: "INTERNAL" });
+
+    // Le serveur doit rester vivant : une requête normale doit encore aboutir après ça.
+    const followUp = await emit<"room:create", JoinPayload>(client(), "room:create", {
+      nickname: "Mathéo",
+      settings: DEFAULT_SETTINGS,
+    });
+    expect(followUp.ok).toBe(true);
+  });
+
+  it("un envoi sans accusé de réception ne fait pas planter le serveur", async () => {
+    const host = client();
+    const created = await emit<"room:create", JoinPayload>(host, "room:create", {
+      nickname: "Mathéo",
+      settings: DEFAULT_SETTINGS,
+    });
+    if (!created.ok) throw new Error("création échouée");
+
+    // Émission volontairement sans callback d'accusé de réception, comme le ferait un
+    // client malveillant (ou une simple ligne dans la console du navigateur).
+    (host.emit as (event: "room:start", input: unknown) => void)("room:start", {});
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    // Le serveur doit rester vivant : une requête normale doit encore aboutir après ça.
+    const followUp = await emit<"room:create", JoinPayload>(client(), "room:create", {
+      nickname: "Léa",
+      settings: DEFAULT_SETTINGS,
+    });
+    expect(followUp.ok).toBe(true);
+  });
+
   it("déconnecte un socket après trois violations de la limite de débit", async () => {
     const host = client();
     const disconnected = new Promise<void>((resolve) => {

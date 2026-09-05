@@ -1,4 +1,12 @@
-import { type Ack, ERROR_MESSAGES, type ErrorCode, pokemonById } from "@pkfind/shared";
+import {
+  type Ack,
+  ERROR_MESSAGES,
+  type ErrorCode,
+  type GameSettings,
+  type JoinPayload,
+  pokemonById,
+  type RoomState,
+} from "@pkfind/shared";
 import type { Config } from "../config.js";
 import { log } from "../log.js";
 import { normalizeCode } from "../rooms/codes.js";
@@ -25,20 +33,56 @@ function run<T>(action: () => T): Ack<T> {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/** N'appelle l'accusé de réception que si l'appelant en a effectivement fourni un. */
+function callAck<T>(ack: unknown, result: Ack<T>): void {
+  if (typeof ack === "function") (ack as (result: Ack<T>) => void)(result);
+}
+
+/**
+ * Enveloppe un handler Socket.IO pour qu'aucun paquet malformé ne puisse jamais faire
+ * planter le process : la déstructuration de la charge utile (un `null` ou une chaîne
+ * envoyés à la place d'un objet) et l'appel à l'accusé de réception (absent quand
+ * l'appelant n'a fourni aucun callback) sont protégés au même titre que le corps du
+ * handler, que `run()` protège déjà. Un paquet malformé ne produit plus qu'un accusé
+ * d'échec propre — ou rien du tout si aucun accusé n'a été fourni — jamais une exception
+ * non interceptée.
+ */
+function safe<In, Out>(handler: (input: In) => Out): (input: unknown, ack: unknown) => void {
+  return (input, ack) => {
+    callAck(
+      ack,
+      run(() => {
+        if (!isRecord(input)) throw new RoomError("INTERNAL");
+        return handler(input as In);
+      }),
+    );
+  };
+}
+
 export function registerHandlers(io: AppServer, store: RoomStore, config: Config): void {
   const allow = createRateLimiter(MAX_EVENTS, WINDOW_MS);
   const violations = new Map<string, number>();
 
   io.on("connection", (socket: AppSocket) => {
-    socket.use((_event, next) => {
+    socket.use((event, next) => {
       if (allow(socket.id)) {
         next();
         return;
       }
       const count = (violations.get(socket.id) ?? 0) + 1;
       violations.set(socket.id, count);
+      // Le client n'a aucun moyen d'observer un `next(new Error(...))` : socket.io ne
+      // livre jamais cette erreur à l'accusé de réception de l'appel bloqué, qui reste
+      // pendu pour toujours côté client. On répond donc directement à cet accusé (s'il y
+      // en a un) avec l'échec RATE_LIMITED, et on abandonne l'événement sans appeler
+      // `next()` : il n'atteint jamais le handler réel.
+      const maybeAck: unknown = event.at(-1);
+      callAck(maybeAck, fail("RATE_LIMITED"));
       if (count >= MAX_VIOLATIONS) socket.disconnect(true);
-      next(new Error("RATE_LIMITED"));
     });
 
     function currentRoom() {
@@ -53,34 +97,12 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
       return id;
     }
 
-    socket.on("room:create", ({ nickname, settings }, ack) => {
-      ack(
-        run(() => {
-          const room = store.create();
-          try {
-            room.updateSettingsUnchecked(settings);
-            const seat = room.addPlayer(nickname);
-            socket.data = { roomCode: room.code, playerId: seat.playerId };
-            void socket.join(room.code);
-            return {
-              roomCode: room.code,
-              playerId: seat.playerId,
-              playerToken: seat.playerToken,
-              nickname: seat.nickname,
-              state: room.toState(),
-            };
-          } catch (error) {
-            store.destroy(room.code, "empty");
-            throw error;
-          }
-        }),
-      );
-    });
-
-    socket.on("room:join", ({ roomCode, nickname }, ack) => {
-      ack(
-        run(() => {
-          const room = store.get(normalizeCode(roomCode));
+    socket.on(
+      "room:create",
+      safe<{ nickname: string; settings: GameSettings }, JoinPayload>(({ nickname, settings }) => {
+        const room = store.create();
+        try {
+          room.updateSettingsUnchecked(settings);
           const seat = room.addPlayer(nickname);
           socket.data = { roomCode: room.code, playerId: seat.playerId };
           void socket.join(room.code);
@@ -91,13 +113,34 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
             nickname: seat.nickname,
             state: room.toState(),
           };
-        }),
-      );
-    });
+        } catch (error) {
+          store.destroy(room.code, "empty");
+          throw error;
+        }
+      }),
+    );
 
-    socket.on("room:rejoin", ({ roomCode, playerId, playerToken }, ack) => {
-      ack(
-        run(() => {
+    socket.on(
+      "room:join",
+      safe<{ roomCode: string; nickname: string }, JoinPayload>(({ roomCode, nickname }) => {
+        const room = store.get(normalizeCode(roomCode));
+        const seat = room.addPlayer(nickname);
+        socket.data = { roomCode: room.code, playerId: seat.playerId };
+        void socket.join(room.code);
+        return {
+          roomCode: room.code,
+          playerId: seat.playerId,
+          playerToken: seat.playerToken,
+          nickname: seat.nickname,
+          state: room.toState(),
+        };
+      }),
+    );
+
+    socket.on(
+      "room:rejoin",
+      safe<{ roomCode: string; playerId: string; playerToken: string }, { state: RoomState }>(
+        ({ roomCode, playerId, playerToken }) => {
           const room = store.get(normalizeCode(roomCode));
           room.rejoin(playerId, playerToken);
           socket.data = { roomCode: room.code, playerId };
@@ -117,60 +160,57 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
           }
 
           return { state: room.toState() };
-        }),
-      );
-    });
+        },
+      ),
+    );
 
-    socket.on("room:settings", ({ settings }, ack) => {
-      ack(
-        run(() => {
-          const room = currentRoom();
-          room.updateSettings(selfId(), settings);
-          return { state: room.toState() };
-        }),
-      );
-    });
+    socket.on(
+      "room:settings",
+      safe<{ settings: GameSettings }, { state: RoomState }>(({ settings }) => {
+        const room = currentRoom();
+        room.updateSettings(selfId(), settings);
+        return { state: room.toState() };
+      }),
+    );
 
-    socket.on("room:start", (_input, ack) => {
-      ack(
-        run(() => {
-          currentRoom().start(selfId());
-          return null;
-        }),
-      );
-    });
+    socket.on(
+      "room:start",
+      safe<Record<string, never>, null>(() => {
+        currentRoom().start(selfId());
+        return null;
+      }),
+    );
 
-    socket.on("room:playAgain", (_input, ack) => {
-      ack(
-        run(() => {
-          const room = currentRoom();
-          room.playAgain(selfId());
-          return { state: room.toState() };
-        }),
-      );
-    });
+    socket.on(
+      "room:playAgain",
+      safe<Record<string, never>, { state: RoomState }>(() => {
+        const room = currentRoom();
+        room.playAgain(selfId());
+        return { state: room.toState() };
+      }),
+    );
 
-    socket.on("round:answer", ({ roundIndex, pokemonId }, ack) => {
-      ack(
-        run(() => {
+    socket.on(
+      "round:answer",
+      safe<{ roundIndex: number; pokemonId: number }, { accepted: true }>(
+        ({ roundIndex, pokemonId }) => {
           currentRoom().answer(selfId(), roundIndex, pokemonId);
           return { accepted: true as const };
-        }),
-      );
-    });
+        },
+      ),
+    );
 
-    socket.on("room:leave", (_input, ack) => {
-      ack(
-        run(() => {
-          const code = socket.data.roomCode;
-          const id = socket.data.playerId;
-          socket.data = {};
-          if (code && id) store.tryGet(code)?.removePlayer(id);
-          if (code) void socket.leave(code);
-          return null;
-        }),
-      );
-    });
+    socket.on(
+      "room:leave",
+      safe<Record<string, never>, null>(() => {
+        const code = socket.data.roomCode;
+        const id = socket.data.playerId;
+        socket.data = {};
+        if (code && id) store.tryGet(code)?.removePlayer(id);
+        if (code) void socket.leave(code);
+        return null;
+      }),
+    );
 
     socket.on("disconnect", () => {
       violations.delete(socket.id);

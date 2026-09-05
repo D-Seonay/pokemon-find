@@ -38,6 +38,18 @@ httpServer.on(
 );
 httpServer.listen(config.port, () => log.info("server_started", { port: config.port }));
 
+// Filet de sécurité : `safe()` dans handlers.ts intercepte déjà tout ce qui peut planter
+// dans le cycle de vie normal d'un événement Socket.IO, mais une erreur imprévue ailleurs
+// (une dépendance, une promesse oubliée) ne doit toujours pas faire tomber le process et
+// couper toutes les rooms en cours. On journalise et on continue de servir.
+process.on("uncaughtException", (error) => {
+  log.error("uncaught_exception", { message: String(error) });
+});
+
+process.on("unhandledRejection", (reason) => {
+  log.error("unhandled_rejection", { message: String(reason) });
+});
+
 process.on("SIGTERM", () => {
   log.info("shutdown_requested");
   store.destroyAll("shutdown");
