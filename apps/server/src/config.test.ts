@@ -46,4 +46,8 @@ describe("loadConfig", () => {
   it("refuse un niveau de journalisation inconnu", () => {
     expect(() => loadConfig({ LOG_LEVEL: "verbose" })).toThrow(ConfigError);
   });
+
+  it("pointe par défaut vers le front construit", () => {
+    expect(loadConfig({}).webDir).toBe("../../web/dist");
+  });
 });
