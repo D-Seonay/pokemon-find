@@ -177,6 +177,15 @@ export class Room {
     if (!player) return;
     player.connected = false;
     this.reassignHostIfNeeded();
+    // §8.7 : plus personne de connecté en pleine partie (tout le monde a fermé l'onglet ou
+    // perdu sa connexion) — les timers de manche/révélation ne doivent pas continuer à
+    // tourner dans le vide, et quiconque revient dans la fenêtre de grâce doit retrouver le
+    // lobby, pas une partie terminée avec un classement vide. `resetToLobby()` fait déjà son
+    // propre `emitState()`, d'où le retour anticipé plutôt qu'un double envoi.
+    if (this.connectedCount === 0 && this.state !== "lobby") {
+      this.resetToLobby();
+      return;
+    }
     this.emitState();
   }
 
@@ -184,6 +193,10 @@ export class Room {
     this.players = this.players.filter((player) => player.id !== playerId);
     if (this.hostId === playerId) this.hostId = null;
     this.reassignHostIfNeeded();
+    if (this.connectedCount === 0 && this.state !== "lobby") {
+      this.resetToLobby();
+      return;
+    }
     this.emitState();
   }
 

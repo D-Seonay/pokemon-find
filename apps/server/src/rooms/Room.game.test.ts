@@ -207,6 +207,59 @@ describe("boucle de jeu", () => {
     expect(reveal?.standings[1]?.rank).toBe(2);
   });
 
+  it("revient au lobby quand plus personne n'est connecté en pleine manche (§8.7)", async () => {
+    const host = seat("Mathéo");
+    const guest = seat("Léa");
+    room.start(host.playerId);
+    await wait(TIMINGS.countdownMs + 20);
+    expect(room.status).toBe("round");
+
+    room.markDisconnected(host.playerId);
+    expect(room.status).toBe("round"); // encore un joueur connecté : la manche continue
+    room.markDisconnected(guest.playerId);
+
+    expect(room.status).toBe("lobby");
+    expect(room.toState().roundIndex).toBe(-1);
+    expect(room.toState().players.every((player) => player.score === 0)).toBe(true);
+
+    // Les timers en cours (fermeture de manche, etc.) ne doivent plus produire d'effet sur
+    // une room vide : aucune révélation ni fin de partie ne doit survenir après coup.
+    await wait(TIMINGS.roundDurationMsOverride! + TIMINGS.revealMs + 40);
+    expect(room.status).toBe("lobby");
+    expect(events.onReveal).not.toHaveBeenCalled();
+    expect(events.onEnd).not.toHaveBeenCalled();
+  });
+
+  it("revient au lobby quand le dernier joueur connecté est retiré en pleine révélation (§8.7)", async () => {
+    // Fenêtre de révélation volontairement large : on veut avoir le temps d'observer et
+    // d'agir pendant la phase `reveal` avant qu'elle n'enchaîne sur la manche suivante.
+    const revealTimings: RoomTimings = { ...TIMINGS, revealMs: 5000 };
+    const revealEvents: RoomListeners = {
+      onState: vi.fn(),
+      onCountdown: vi.fn(),
+      onRoundStart: vi.fn(),
+      onAnswered: vi.fn(),
+      onReveal: vi.fn(),
+      onEnd: vi.fn(),
+    };
+    const revealRoom = new Room("WXYZ", revealTimings, revealEvents, () => SEED);
+    const host = revealRoom.addPlayer("Mathéo");
+    const guest = revealRoom.addPlayer("Léa");
+    revealRoom.start(host.playerId);
+    await wait(revealTimings.countdownMs + 20);
+    revealRoom.answer(host.playerId, 0, targets[0]!);
+    revealRoom.answer(guest.playerId, 0, targets[0]! === 1 ? 2 : 1);
+    await wait(revealTimings.allAnsweredDelayMs + 20);
+    expect(revealRoom.status).toBe("reveal");
+
+    revealRoom.removePlayer(host.playerId);
+    revealRoom.removePlayer(guest.playerId);
+
+    expect(revealRoom.status).toBe("lobby");
+    expect(revealRoom.isEmpty).toBe(true);
+    revealRoom.dispose();
+  });
+
   it("revient au lobby avec les scores remis à zéro sur relance", async () => {
     const settings = { ...DEFAULT_SETTINGS, roundCount: 5 as const };
     const host = seat("Mathéo");
