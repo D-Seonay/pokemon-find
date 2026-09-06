@@ -37,6 +37,26 @@ describe("RoundResult", () => {
     expect(answer).toHaveTextContent("écart 32");
   });
 
+  it("indique que la réponse était trop basse", () => {
+    render(<RoundResult round={missed} pool={gen1} />);
+    // Rhinocorne #111 pour une cible #143 : il fallait chercher plus haut.
+    expect(screen.getByText(/Votre réponse/)).toHaveTextContent("trop bas");
+  });
+
+  it("indique que la réponse était trop haute", () => {
+    const tooHigh: SoloRound = { ...missed, answerId: 175 };
+    render(<RoundResult round={tooHigh} pool={gen1} />);
+    expect(screen.getByText(/Votre réponse/)).toHaveTextContent("trop haut");
+  });
+
+  it("ne donne aucune direction pour une réponse exacte", () => {
+    const exact: SoloRound = { targetId: 143, answerId: 143, points: 1000, responseTimeMs: 900 };
+    render(<RoundResult round={exact} pool={gen1} />);
+    const answer = screen.getByText(/Votre réponse/);
+    expect(answer).not.toHaveTextContent("trop bas");
+    expect(answer).not.toHaveTextContent("trop haut");
+  });
+
   it("affiche les points gagnés", () => {
     render(<RoundResult round={missed} pool={gen1} />);
     expect(screen.getByText("+340")).toBeInTheDocument();

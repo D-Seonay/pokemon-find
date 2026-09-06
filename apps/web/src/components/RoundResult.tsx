@@ -16,6 +16,15 @@ export function RoundResult({
   const answer = round.answerId === null ? null : tryPokemonById(round.answerId);
   const gap = round.answerId === null ? null : gapBetween(round.targetId, round.answerId);
 
+  // Le sens de l'erreur : avec l'écart seul, on ne sait pas de quel côté de la cible on
+  // est tombé. C'est ce qui rend la manche instructive plutôt que juste sanctionnée.
+  const direction =
+    round.answerId === null || round.answerId === round.targetId
+      ? ""
+      : round.answerId < round.targetId
+        ? ", trop bas"
+        : ", trop haut";
+
   return (
     <section
       role="button"
@@ -32,7 +41,7 @@ export function RoundResult({
       <p className="mono text-[var(--text-dim)]">{formatPokedexNumber(target.id, pool.maxId)}</p>
       <p>
         {answer
-          ? `Votre réponse : ${answer.nameFr} ${formatPokedexNumber(answer.id, pool.maxId)} — écart ${gap}`
+          ? `Votre réponse : ${answer.nameFr} ${formatPokedexNumber(answer.id, pool.maxId)} — écart ${gap}${direction}`
           : "Pas de réponse — temps écoulé"}
       </p>
       <p className="mono text-4xl" style={{ color: "var(--accent)" }}>
