@@ -28,4 +28,27 @@ describe("MultiReveal", () => {
     const row = screen.getByText("Tom").closest("tr");
     expect(row?.textContent).toContain("—");
   });
+
+  it("affiche le numéro du Pokémon joué à côté de son nom", () => {
+    render(<MultiReveal target={pokemonById(143)} results={results} maxId={151} />);
+    const row = screen.getByText("Léa").closest("tr");
+    expect(row?.textContent).toContain("Rhinocorne");
+    expect(row?.textContent).toContain("#111");
+  });
+
+  it("garde « Trouvé ! » pour une réponse exacte, sans répéter le numéro de la cible", () => {
+    render(<MultiReveal target={pokemonById(143)} results={results} maxId={151} />);
+    const row = screen.getByText("Mathéo").closest("tr");
+    expect(row?.textContent).toContain("Trouvé !");
+    expect(row?.textContent).not.toContain("#143");
+  });
+
+  it("respecte le remplissage du pool national pour le numéro joué", () => {
+    const national: RoundResult[] = [
+      { playerId: "a", nickname: "Léa", pokemonId: 111, gap: 32, points: 340, responseTimeMs: 10 },
+    ];
+    render(<MultiReveal target={pokemonById(143)} results={national} maxId={1025} />);
+    const row = screen.getByText("Léa").closest("tr");
+    expect(row?.textContent).toContain("#0111");
+  });
 });

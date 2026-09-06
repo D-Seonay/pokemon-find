@@ -1,4 +1,5 @@
 import { type Pool, gapBetween, pokemonById, tryPokemonById } from "@pkfind/shared";
+import { formatPokedexNumber } from "../format.js";
 import type { SoloRound } from "../game/useSoloGame.js";
 import { PokemonSprite } from "./PokemonSprite.js";
 
@@ -28,12 +29,10 @@ export function RoundResult({
     >
       <PokemonSprite pokemon={target} size={160} />
       <p className="text-2xl font-extrabold">{target.nameFr}</p>
-      <p className="mono text-[var(--text-dim)]">
-        #{String(target.id).padStart(pool.maxId > 999 ? 4 : 3, "0")}
-      </p>
+      <p className="mono text-[var(--text-dim)]">{formatPokedexNumber(target.id, pool.maxId)}</p>
       <p>
         {answer
-          ? `Votre réponse : ${answer.nameFr} — écart ${gap}`
+          ? `Votre réponse : ${answer.nameFr} ${formatPokedexNumber(answer.id, pool.maxId)} — écart ${gap}`
           : "Pas de réponse — temps écoulé"}
       </p>
       <p className="mono text-4xl" style={{ color: "var(--accent)" }}>

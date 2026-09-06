@@ -39,6 +39,9 @@ export function Home() {
         <Button variant="ghost" onClick={() => go("/join")}>
           Rejoindre une room
         </Button>
+        <Button variant="ghost" onClick={() => go("/pokedex")}>
+          Pokédex
+        </Button>
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 import { type Pokemon, type RoundResult, tryPokemonById } from "@pkfind/shared";
+import { formatPokedexNumber } from "../format.js";
 import { PokemonSprite } from "./PokemonSprite.js";
 
 export function MultiReveal({
@@ -14,9 +15,7 @@ export function MultiReveal({
     <section aria-live="polite" className="flex flex-col items-center gap-4">
       <PokemonSprite pokemon={target} size={140} />
       <p className="text-2xl font-extrabold">{target.nameFr}</p>
-      <p className="mono text-[var(--text-dim)]">
-        #{String(target.id).padStart(maxId > 999 ? 4 : 3, "0")}
-      </p>
+      <p className="mono text-[var(--text-dim)]">{formatPokedexNumber(target.id, maxId)}</p>
       <table className="w-full text-left text-sm">
         <thead className="text-[var(--text-dim)]">
           <tr>
@@ -36,7 +35,20 @@ export function MultiReveal({
             return (
               <tr key={result.playerId}>
                 <td>{result.nickname}</td>
-                <td>{answer == null ? "—" : isExact ? "Trouvé !" : answer.nameFr}</td>
+                <td>
+                  {answer == null ? (
+                    "—"
+                  ) : isExact ? (
+                    "Trouvé !"
+                  ) : (
+                    <>
+                      <span>{answer.nameFr}</span>{" "}
+                      <span className="text-[var(--text-dim)]">
+                        {formatPokedexNumber(answer.id, maxId)}
+                      </span>
+                    </>
+                  )}
+                </td>
                 <td>{result.gap ?? "—"}</td>
                 <td>{result.points}</td>
               </tr>
