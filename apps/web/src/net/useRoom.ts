@@ -45,7 +45,13 @@ export type RoomView = {
   final: { standings: Standing[]; history: RoundResult[][] } | null;
   actions: {
     start: () => void;
-    setSettings: (settings: GameSettings) => void;
+    /**
+     * `onSettled` est appelé avec l'accusé de réception une fois l'écriture réseau (débattue)
+     * effectivement partie et son accusé revenu — jamais pour un appel annulé par un clic
+     * suivant. Permet à l'appelant de composer plusieurs clics rapprochés côté état local
+     * puis de se réconcilier avec l'état serveur une fois la seule écriture réelle actée.
+     */
+    setSettings: (settings: GameSettings, onSettled?: (ack: Ack<unknown>) => void) => void;
     answer: (pokemonId: number) => void;
     playAgain: () => void;
     leave: () => void;
@@ -70,6 +76,7 @@ export function useRoom(input: {
   const [closed, setClosed] = useState<string | null>(null);
   const joined = useRef(false);
   const settingsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const leaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Toujours à jour sans jamais forcer les effets ci-dessous à se réenregistrer : le
   // gestionnaire `connect`, posé une seule fois au montage, doit malgré tout pouvoir lire
@@ -114,6 +121,15 @@ export function useRoom(input: {
 
   useEffect(() => {
     const socket = getSocket();
+    // Distingue la toute première connexion (déjà prise en charge par l'effet de montage
+    // ci-dessous, qui émet lui-même `room:create`/`room:join`/`room:rejoin`) d'une vraie
+    // reconnexion transport. Si le socket n'est pas encore connecté au moment où cet effet
+    // s'enregistre, le tout prochain "connect" sera cette première connexion : on l'ignore
+    // une seule fois puis on redevient attentif à toute reconnexion ultérieure. S'il est
+    // déjà connecté (socket réutilisé après une navigation interne), il n'y aura jamais de
+    // "connect" correspondant à "maintenant" : tout "connect" à venir est par construction
+    // une vraie reconnexion, donc rien à ignorer.
+    let skipNextConnect = !socket.connected;
 
     socket.on("room:state", (nextState) => {
       setState(nextState);
@@ -149,11 +165,17 @@ export function useRoom(input: {
     // Une coupure de transport (wifi qui saute, tunnel qui expire) reconnecte le socket
     // avec un nouvel id et un `socket.data` vide côté serveur : sans ce rattrapage, le
     // joueur resterait figé sur son dernier écran pour toujours, jusqu'à son retrait après
-    // la fenêtre de grâce. Ne rejoue `room:rejoin` que si une session a déjà été établie —
-    // le montage s'en charge déjà pour la toute première connexion — pour ne jamais
-    // déclencher une double jointure.
+    // la fenêtre de grâce. Ne rejoue `room:rejoin` que sur une vraie reconnexion — jamais
+    // sur la connexion initiale, déjà prise en charge par l'effet de montage — sans quoi
+    // les deux jointures partiraient en parallèle et produiraient un siège fantôme dès
+    // qu'une session stockée est périmée (l'accusé de la seconde jointure écrase alors
+    // celui de la première dans le stockage, qui ne répond plus jamais).
     const handleConnect = () => {
       setReconnecting(false);
+      if (skipNextConnect) {
+        skipNextConnect = false;
+        return;
+      }
       const stored = readJson<Session | null>(KEYS.session, null, "session");
       if (stored && stored.roomCode === inputRef.current.code) rejoinSession(stored);
     };
@@ -222,6 +244,39 @@ export function useRoom(input: {
     };
   }, []);
 
+  // Un joueur qui navigue ailleurs reste sinon marqué `connected` côté serveur jusqu'à
+  // l'expiration de la fenêtre de grâce : un fantôme dans le lobby qui ne répond jamais,
+  // forçant chaque manche à courir jusqu'à son terme puisque la clôture anticipée exige que
+  // tous les joueurs connectés aient répondu. D'où l'envoi de `room:leave` au démontage.
+  //
+  // Mais en développement, `<StrictMode>` monte, nettoie puis remonte immédiatement (de
+  // façon synchrone, sans jamais rendre la main au navigateur) pour vérifier que les effets
+  // sont rejouables sans effet de bord observable. Un `room:leave` envoyé tout de suite
+  // dans ce nettoyage confondrait cette vérification avec une vraie navigation : le joueur
+  // serait éjecté côté serveur, et jamais réintégré puisque `joined` (ref) empêche le
+  // remount de rejouer la jointure — exactement le bug constaté (Hote+Dresseur → Hote
+  // seul). On diffère donc l'envoi d'une macrotâche : le remount StrictMode s'exécute avant
+  // que ce timer ne se déclenche et l'annule ; seul un vrai démontage (navigation, fermeture
+  // d'onglet) laisse le timer aller à son terme. Quand il se déclenche réellement, on
+  // réarme aussi `joined` : si ce même composant venait à se remonter plus tard pour de bon
+  // (au lieu d'un remount StrictMode synchrone), il rejoue sa jointure au lieu de rester
+  // bloqué sur l'état d'avant le départ.
+  useEffect(() => {
+    if (leaveTimer.current) {
+      clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
+    return () => {
+      leaveTimer.current = setTimeout(() => {
+        leaveTimer.current = null;
+        joined.current = false;
+        getSocket().emit("room:leave", {}, () => {
+          // Personne n'observe plus l'accusé : le composant est réellement démonté.
+        });
+      }, 0);
+    };
+  }, []);
+
   const emitSimple = useCallback((event: "room:start" | "room:playAgain" | "room:leave") => {
     const socket = getSocket();
     const onAck = (ack: Ack<unknown>) => {
@@ -255,14 +310,18 @@ export function useRoom(input: {
       },
       leave: () => emitSimple("room:leave"),
       dismissActionError: () => setActionError(null),
-      setSettings: (settings) => {
+      setSettings: (settings, onSettled) => {
         // GenerationPicker émet un événement par case cochée : sans ce débounce, un hôte qui
         // bascule plusieurs générations peut plausiblement atteindre la limite de débit
-        // serveur (20 événements / 10 s) et se faire déconnecter pour ça.
+        // serveur (20 événements / 10 s) et se faire déconnecter pour ça. On ne débat que
+        // l'écriture réseau elle-même : l'appelant est responsable de composer les clics
+        // successifs côté état local (voir Room.tsx) pour qu'aucun ne soit perdu, ce
+        // `settings` n'étant jamais que la dernière valeur composée au moment de l'appel.
         if (settingsTimer.current) clearTimeout(settingsTimer.current);
         settingsTimer.current = setTimeout(() => {
           getSocket().emit("room:settings", { settings }, (ack) => {
             setActionError(ack.ok ? null : ack.message);
+            onSettled?.(ack);
           });
         }, SETTINGS_DEBOUNCE_MS);
       },

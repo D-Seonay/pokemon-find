@@ -1,4 +1,4 @@
-import { buildPool } from "@pkfind/shared";
+import { buildPool, type GenerationId } from "@pkfind/shared";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button.js";
@@ -28,13 +28,18 @@ export function Room() {
     return () => clearInterval(handle);
   }, []);
 
-  // Un joueur qui navigue ailleurs reste sinon marqué `connected` côté serveur jusqu'à
-  // l'expiration de la fenêtre de grâce : un fantôme dans le lobby qui ne répond jamais,
-  // forçant chaque manche à courir jusqu'à son terme puisque la clôture anticipée exige que
-  // tous les joueurs connectés aient répondu.
-  useEffect(() => {
-    return () => room.actions.leave();
-  }, []);
+  // GenerationPicker est entièrement piloté par l'état serveur (`value` ci-dessous vient de
+  // `state.settings.generations`) : deux clics rapprochés recalculeraient sinon tous deux
+  // depuis la même valeur serveur périmée, le second écrasant le premier une fois le débat
+  // de `setSettings` écoulé. Le choix en attente compose donc les clics ici, côté état
+  // local, et sert de source de vérité pour l'affichage tant que l'écriture réseau n'a pas
+  // été accusée ; on se réconcilie avec l'état serveur dès que cet accusé revient.
+  const [pendingGenerations, setPendingGenerations] = useState<GenerationId[] | null>(null);
+
+  // La règle "leave on unmount" (stopper les fantômes qui ne répondent jamais, ce qui
+  // forcerait chaque manche à courir jusqu'à son terme) vit désormais dans `useRoom` lui-même :
+  // elle a besoin d'y distinguer un vrai démontage d'un remount `<StrictMode>` synchrone, ce
+  // que seul le hook peut faire puisque c'est lui qui possède la ref de jointure à réarmer.
 
   if (room.closed) return <p>La room a été fermée ({room.closed}).</p>;
   // Erreur fatale : uniquement issue du chemin de jointure (room introuvable, pleine,
@@ -136,8 +141,13 @@ export function Room() {
         </ul>
         {isHost ? (
           <GenerationPicker
-            value={state.settings.generations}
-            onChange={(generations) => room.actions.setSettings({ ...state.settings, generations })}
+            value={pendingGenerations ?? state.settings.generations}
+            onChange={(generations) => {
+              setPendingGenerations(generations);
+              room.actions.setSettings({ ...state.settings, generations }, () => {
+                setPendingGenerations(null);
+              });
+            }}
           />
         ) : (
           <p className="text-[var(--text-dim)]">

@@ -449,15 +449,24 @@ describe("handlers Socket.IO", () => {
     // client malveillant (ou une simple ligne dans la console du navigateur).
     (host.emit as (event: "room:start", input: unknown) => void)("room:start", {});
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
-
-    // Le serveur doit rester vivant : une requête normale doit encore aboutir après ça.
-    const followUp = await emit<"room:create", JoinPayload>(client(), "room:create", {
-      nickname: "Léa",
-      settings: DEFAULT_SETTINGS,
-    });
-    expect(followUp.ok).toBe(true);
-  });
+    // Le serveur doit rester vivant. On sonde jusqu'à obtenir une réponse normale plutôt
+    // que de dormir un temps fixe : un délai fixe confond une machine momentanément lente
+    // (poignée de main WebSocket froide, GC, CI chargée) avec un serveur mort, ce qui a
+    // produit un run flaky sur 32. Avec le sondage, le seul moyen d'échec restant est un
+    // serveur réellement mort — exactement ce que ce test doit prouver.
+    await expect
+      .poll(
+        async () => {
+          const followUp = await emit<"room:create", JoinPayload>(client(), "room:create", {
+            nickname: "Léa",
+            settings: DEFAULT_SETTINGS,
+          });
+          return followUp.ok;
+        },
+        { timeout: 15_000, interval: 100 },
+      )
+      .toBe(true);
+  }, 20_000);
 
   it("déconnecte un socket après trois violations de la limite de débit", async () => {
     const host = client();
