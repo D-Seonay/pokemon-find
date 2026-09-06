@@ -15,9 +15,8 @@ import { RoundResult } from "../components/RoundResult.js";
 import { TargetNumber } from "../components/TargetNumber.js";
 import { Timer } from "../components/Timer.js";
 import { useSoloGame } from "../game/useSoloGame.js";
+import { type DailyEntry, currentStreak, readHistory, recordDaily } from "../storage/daily.js";
 import { KEYS, readJson, writeJson } from "../storage/local.js";
-
-type DailyEntry = { date: string; total: number; points: number[] };
 
 export function Daily() {
   // Figé une seule fois au montage : la date du jour et la graine du défi doivent provenir
@@ -30,7 +29,7 @@ export function Daily() {
     return stored && stored.date === today ? stored : null;
   });
 
-  if (entry) return <DailyResult entry={entry} />;
+  if (entry) return <DailyResult entry={entry} today={today} />;
   return <DailyBoard now={now} onFinish={setEntry} today={today} />;
 }
 
@@ -53,6 +52,7 @@ function DailyBoard({
       points: game.rounds.map((round) => round.points),
     };
     writeJson(KEYS.daily, result);
+    recordDaily(result);
     onFinish(result);
   }, [game.phase, game.rounds, game.totalScore, onFinish, today]);
 
@@ -82,8 +82,11 @@ function DailyBoard({
   );
 }
 
-function DailyResult({ entry }: { entry: DailyEntry }) {
+function DailyResult({ entry, today }: { entry: DailyEntry; today: string }) {
   const [copied, setCopied] = useState(false);
+  // Lu une seule fois : l'historique ne bouge plus une fois la partie du jour terminée.
+  const [history] = useState(readHistory);
+  const streak = currentStreak(history, today);
   const emojis = entry.points.map((points) => TIER_EMOJI[tierOf(points)]).join("");
   const max = entry.points.length * MAX_SCORE;
 
@@ -109,6 +112,25 @@ function DailyResult({ entry }: { entry: DailyEntry }) {
         {entry.total.toLocaleString("fr-FR")} / {max.toLocaleString("fr-FR")}
       </p>
       <p className="text-3xl tracking-widest">{emojis}</p>
+      {streak > 0 && (
+        <p className="text-[var(--text-dim)]">
+          <span className="mono text-[var(--accent)]">{streak}</span>{" "}
+          {streak === 1 ? "jour d'affilée" : "jours d'affilée"}
+        </p>
+      )}
+      {history.length > 1 && (
+        <ul className="flex flex-wrap justify-center gap-1" aria-label="Trente derniers jours">
+          {history.map((day) => (
+            <li
+              key={day.date}
+              title={`${day.date} — ${day.total.toLocaleString("fr-FR")}`}
+              className="text-lg leading-none"
+            >
+              {TIER_EMOJI[tierOf(Math.round(day.total / Math.max(1, day.points.length)))]}
+            </li>
+          ))}
+        </ul>
+      )}
       <Button onClick={copy}>{copied ? "Copié" : "Partager le résultat"}</Button>
       <p className="text-sm text-[var(--text-dim)]">Reviens demain pour un nouveau défi.</p>
       <Link to="/" className="underline">

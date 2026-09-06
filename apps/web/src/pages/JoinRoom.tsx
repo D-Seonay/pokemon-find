@@ -18,7 +18,7 @@ export function JoinRoom() {
           maxLength={4}
           aria-label="Code de la room"
           onChange={(event) => setCode(event.target.value.toUpperCase())}
-          className="mono h-14 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-4 text-3xl tracking-[0.4em]"
+          className="mono h-14 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-4 text-2xl tracking-[0.3em] sm:text-3xl sm:tracking-[0.4em]"
         />
       </label>
       <label className="flex flex-col gap-2">

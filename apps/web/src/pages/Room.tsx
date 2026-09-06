@@ -122,7 +122,12 @@ export function Room() {
     return (
       <section className="flex flex-col gap-6">
         <h1 className="text-3xl font-extrabold">Room</h1>
-        <p className="mono text-6xl tracking-[0.3em]">{state.code}</p>
+        <p
+          className="mono tracking-[0.2em] sm:tracking-[0.3em]"
+          style={{ fontSize: "clamp(2.5rem, 14vw, 3.75rem)" }}
+        >
+          {state.code}
+        </p>
         <Button
           variant="ghost"
           onClick={() =>

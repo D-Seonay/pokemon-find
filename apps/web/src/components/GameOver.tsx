@@ -54,7 +54,9 @@ export function GameOver({
         <table className="w-full text-left text-sm">
           <thead className="text-[var(--text-dim)]">
             <tr>
-              <th scope="col">Cible</th>
+              <th scope="col" className="hidden sm:table-cell">
+                Cible
+              </th>
               <th scope="col">Pokémon</th>
               <th scope="col">Réponse</th>
               <th scope="col">Écart</th>
@@ -66,7 +68,7 @@ export function GameOver({
               const answer = round.answerId === null ? null : tryPokemonById(round.answerId);
               return (
                 <tr key={`${round.targetId}-${index}`}>
-                  <td>#{round.targetId}</td>
+                  <td className="hidden sm:table-cell">#{round.targetId}</td>
                   <td>{pokemonById(round.targetId).nameFr}</td>
                   <td>{answer?.nameFr ?? "—"}</td>
                   <td>

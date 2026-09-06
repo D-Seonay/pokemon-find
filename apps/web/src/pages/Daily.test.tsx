@@ -40,6 +40,36 @@ describe("Daily", () => {
     expect(screen.getByText("🟦🟩🟨⬛🟩🟦🟨⬛🟧🟩")).toBeInTheDocument();
   });
 
+  it("affiche la série en cours sur l'écran de résultat", () => {
+    writeJson(KEYS.daily, {
+      date: "2026-09-04",
+      total: 7842,
+      points: [1000, 800, 500, 100, 750, 1000, 450, 20, 200, 900],
+    });
+    writeJson(KEYS.dailyHistory, [
+      { date: "2026-09-02", total: 100, points: [100] },
+      { date: "2026-09-03", total: 200, points: [200] },
+      { date: "2026-09-04", total: 7842, points: [7842] },
+    ]);
+    renderDaily();
+    // Le nombre vit dans son propre <span> pour être coloré : on interroge le paragraphe.
+    expect(screen.getByText(/d'affilée/).textContent).toMatch(/3\s*jours d'affilée/);
+  });
+
+  it("accorde la série au singulier pour un premier jour", () => {
+    writeJson(KEYS.daily, { date: "2026-09-04", total: 100, points: [100] });
+    writeJson(KEYS.dailyHistory, [{ date: "2026-09-04", total: 100, points: [100] }]);
+    renderDaily();
+    expect(screen.getByText(/d'affilée/).textContent).toMatch(/1\s*jour d'affilée/);
+  });
+
+  it("survit à un historique absent sans masquer le résultat", () => {
+    writeJson(KEYS.daily, { date: "2026-09-04", total: 100, points: [100] });
+    renderDaily();
+    expect(screen.getByText(/Défi du jour/)).toBeInTheDocument();
+    expect(screen.queryByText(/d'affilée/)).toBeNull();
+  });
+
   it("relance une partie si l'entrée mémorisée date d'un autre jour", () => {
     writeJson(KEYS.daily, { date: "2026-09-03", total: 100, points: [100] });
     renderDaily();

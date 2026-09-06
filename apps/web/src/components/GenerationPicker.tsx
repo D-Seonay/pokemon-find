@@ -16,7 +16,7 @@ export function GenerationPicker({ value, onChange }: Props) {
   return (
     <fieldset className="rounded-[var(--radius)] border border-[var(--border)] p-4">
       <legend className="px-2 text-sm text-[var(--text-dim)]">Générations</legend>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
         {ALL_GENERATIONS.map((gen) => (
           <label
             key={gen}
