@@ -21,6 +21,7 @@ d'acceptation) est disponible dans
 
 ```bash
 pnpm install
+pnpm -F @pkfind/shared build   # obligatoire au premier lancement, voir ci-dessous
 pnpm dev
 ```
 
@@ -28,6 +29,10 @@ pnpm dev
 le front (Vite, `http://localhost:5173`). Le front est servi séparément du serveur en
 développement ; c'est en production, via le conteneur, que le même processus sert le
 front construit et le WebSocket sur un seul port.
+
+Sur un clone neuf, `packages/shared/dist` n'existe pas encore. Or le serveur et le front
+consomment le paquet partagé par ce dossier — sans lui, `pnpm typecheck` et `pnpm test`
+échouent sur des modules introuvables. Le construire une fois après l'installation suffit.
 
 **Attention** : `packages/shared` n'a pas de script de compilation à la volée (« watch »),
 et le serveur comme le front le consomment via son `dist/` déjà compilé. Ni `pnpm dev`

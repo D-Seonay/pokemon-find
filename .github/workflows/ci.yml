@@ -34,6 +34,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # `@pkfind/shared` expose ses types via `dist/index.d.ts` : sur un checkout neuf ce
+      # dossier n'existe pas, et typecheck comme test échouent sur des modules introuvables.
+      # Un poste de développement ne le voit jamais, son `dist` traînant d'une exécution
+      # précédente. Les tests de bout en bout reconstruisent de toute façon.
+      - run: pnpm build
+
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
