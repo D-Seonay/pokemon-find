@@ -51,4 +51,11 @@ describe("MultiReveal", () => {
     const row = screen.getByText("Léa").closest("tr");
     expect(row?.textContent).toContain("#0111");
   });
+
+  it("déplace le focus sur le panneau dès son affichage, pour garder une position stable côté clavier", () => {
+    const { container } = render(
+      <MultiReveal target={pokemonById(143)} results={results} maxId={151} />,
+    );
+    expect(document.activeElement).toBe(container.querySelector("section"));
+  });
 });

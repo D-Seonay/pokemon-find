@@ -1,4 +1,5 @@
 import { type Pool, gapBetween, pokemonById, tryPokemonById } from "@pkfind/shared";
+import { useEffect, useRef } from "react";
 import { formatPokedexNumber } from "../format.js";
 import type { SoloRound } from "../game/useSoloGame.js";
 import { PokemonSprite } from "./PokemonSprite.js";
@@ -12,6 +13,18 @@ export function RoundResult({
   pool: Pool;
   onSkip?: () => void;
 }) {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // Le champ de réponse disparaît avec la manche (voir PokemonCombobox, qui se focalise
+  // lui-même dès qu'il redevient disponible) : sans ce transfert, le focus retomberait sur
+  // <body> et un joueur au clavier devrait tabuler à l'aveugle pour retrouver le seul
+  // élément actionnable de cet écran, ce panneau. L'effet se rejoue à chaque manche car ce
+  // composant est démonté puis remonté à chaque révélation (voir SoloGame/Daily, qui
+  // alternent entre lui et PokemonCombobox selon la phase).
+  useEffect(() => {
+    sectionRef.current?.focus();
+  }, []);
+
   const target = pokemonById(round.targetId);
   const answer = round.answerId === null ? null : tryPokemonById(round.answerId);
   const gap = round.answerId === null ? null : gapBetween(round.targetId, round.answerId);
@@ -27,6 +40,7 @@ export function RoundResult({
 
   return (
     <section
+      ref={sectionRef}
       role="button"
       tabIndex={0}
       aria-live="polite"

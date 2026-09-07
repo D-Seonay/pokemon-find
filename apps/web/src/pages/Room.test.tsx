@@ -271,6 +271,49 @@ describe("Room — déroulement d'une manche", () => {
     const playAgain = emittedOf("room:playAgain")[0];
     expect(playAgain?.payload).toEqual({ sameSeries: false });
   });
+
+  it("déplace le focus sur le panneau de révélation à l'arrivée de round:reveal", () => {
+    const { container } = renderRoom();
+    settleJoin(makeState({ players: [host(), guest()] }));
+
+    act(() => {
+      triggerSocketEvent("round:reveal", {
+        roundIndex: 0,
+        target: {
+          id: 25,
+          nameFr: "Pikachu",
+          nameEn: "Pikachu",
+          slugFr: "pikachu",
+          slugEn: "pikachu",
+          generation: 1,
+          spriteUrl: "https://example.test/25.png",
+        },
+        results: [
+          {
+            playerId: "host-1",
+            nickname: "Mathéo",
+            pokemonId: 25,
+            gap: 0,
+            points: 1000,
+            responseTimeMs: 1200,
+          },
+        ],
+        standings: [
+          {
+            rank: 1,
+            playerId: "host-1",
+            nickname: "Mathéo",
+            score: 1000,
+            totalResponseTimeMs: 1200,
+          },
+        ],
+        revealEndsAt: Date.now() + 6000,
+        serverNow: Date.now(),
+      });
+    });
+
+    expect(document.activeElement).toBe(container.querySelector("section"));
+  });
 });
 
 describe("Room — rendu sous StrictMode (comme en développement réel)", () => {

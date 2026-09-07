@@ -1,4 +1,5 @@
 import { type Pokemon, type RoundResult, tryPokemonById } from "@pkfind/shared";
+import { useEffect, useRef } from "react";
 import { formatPokedexNumber } from "../format.js";
 import { PokemonSprite } from "./PokemonSprite.js";
 
@@ -11,8 +12,26 @@ export function MultiReveal({
   results: RoundResult[];
   maxId: number;
 }) {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  // Contrairement à RoundResult, cette révélation n'est pas actionnable : elle avance sur
+  // le calendrier du serveur, il n'y a rien à valider au clavier. On y déplace quand même le
+  // focus (tabIndex=-1 : jamais atteint par Tab, seulement par ce focus() programmatique)
+  // pour que le round précédent — dont PokemonCombobox vient de disparaître avec la manche —
+  // ne laisse pas le focus retomber sur <body>, ce qui rendrait la prochaine tabulation
+  // imprévisible. `aria-live` reste la voie d'annonce pour les lecteurs d'écran ; ce transfert
+  // de focus ne duplique pas cette annonce, voir la note dans RoundResult.tsx pour le détail.
+  useEffect(() => {
+    sectionRef.current?.focus();
+  }, []);
+
   return (
-    <section aria-live="polite" className="flex flex-col items-center gap-4">
+    <section
+      ref={sectionRef}
+      tabIndex={-1}
+      aria-live="polite"
+      className="flex flex-col items-center gap-4"
+    >
       <PokemonSprite pokemon={target} size={140} />
       <p className="text-2xl font-extrabold">{target.nameFr}</p>
       <p className="mono text-[var(--text-dim)]">{formatPokedexNumber(target.id, maxId)}</p>

@@ -86,4 +86,9 @@ describe("RoundResult", () => {
     render(<RoundResult round={missed} pool={gen1} />);
     expect(screen.queryByText(/pour continuer/)).toBeNull();
   });
+
+  it("déplace le focus sur le panneau dès son affichage, pour qu'Entrée enchaîne sans tabulation", () => {
+    render(<RoundResult round={missed} pool={gen1} onSkip={vi.fn()} />);
+    expect(document.activeElement).toBe(screen.getByRole("button"));
+  });
 });
