@@ -226,6 +226,18 @@ describe("useRoom — actions et erreurs passagères", () => {
     act(() => triggerSocketEvent("disconnect", "io server disconnect"));
     expect(getConnectCallCount()).toBe(1);
   });
+
+  it("efface l'indicateur de reconnexion dès que la socket revient", () => {
+    // La moitié qui manquait : rien ne vérifiait que `reconnecting` redescend. Un refactor
+    // qui oublierait `setReconnecting(false)` laisserait la bannière « Reconnexion… » à vie
+    // par-dessus une partie qui tourne, sans qu'aucun test ne bronche.
+    const { result } = renderHook(() => useRoom(baseInput()));
+    act(() => triggerSocketEvent("disconnect", "transport close"));
+    expect(result.current.reconnecting).toBe(true);
+
+    act(() => triggerSocketEvent("connect"));
+    expect(result.current.reconnecting).toBe(false);
+  });
 });
 
 describe("useRoom — régression : debounce de room:settings", () => {
