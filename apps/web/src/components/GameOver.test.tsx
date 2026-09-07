@@ -1,8 +1,9 @@
-import { DEFAULT_SETTINGS } from "@pkfind/shared";
+import { DEFAULT_SETTINGS, type GenerationId } from "@pkfind/shared";
 import { render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { SoloRound } from "../game/useSoloGame.js";
+import { readSoloHistory } from "../storage/stats.js";
 import { GameOver } from "./GameOver.js";
 
 afterEach(() => {
@@ -11,6 +12,14 @@ afterEach(() => {
 });
 
 const rounds: SoloRound[] = [{ targetId: 1, answerId: 1, points: 800, responseTimeMs: 1000 }];
+
+// Génération 1 (ids 1-151), pool national par défaut : maxId = 1025 (>= 1000), donc le
+// numéro affiché doit être complété sur 4 chiffres, comme partout ailleurs dans l'appli.
+const nationalRounds: SoloRound[] = [
+  { targetId: 7, answerId: 7, points: 1000, responseTimeMs: 1000 },
+  { targetId: 25, answerId: 35, points: 400, responseTimeMs: 1000 },
+  { targetId: 150, answerId: null, points: 0, responseTimeMs: null },
+];
 
 describe("GameOver", () => {
   // React StrictMode double-invoque le rendu (et les effets) en développement. Si l'écriture
@@ -61,5 +70,53 @@ describe("GameOver", () => {
     );
 
     expect(getItemSpy.mock.calls.length).toBe(callsAfterMount);
+  });
+
+  // Même piège que le record : enregistrer la partie dans l'historique de statistiques se
+  // fait dans un effet, et cette écriture-là n'est PAS idempotente (chaque appel ajoute une
+  // entrée, contrairement à `saveBest` qui n'écrase que sur un score strictement supérieur).
+  // Sans garde explicite, le double-passage des effets en StrictMode dupliquerait la partie
+  // dans l'historique et fausserait toutes les statistiques dérivées.
+  it("n'enregistre la partie qu'une seule fois dans l'historique, même en StrictMode", () => {
+    render(
+      <StrictMode>
+        <GameOver rounds={rounds} settings={DEFAULT_SETTINGS} onReplay={vi.fn()} />
+      </StrictMode>,
+    );
+    const history = readSoloHistory();
+    expect(history).toHaveLength(1);
+    expect(history[0]?.rounds).toHaveLength(rounds.length);
+  });
+
+  it("affiche l'écart moyen, les réponses exactes et la génération la plus faible de la partie", () => {
+    const statsRounds: SoloRound[] = [
+      { targetId: 10, answerId: 10, points: 1000, responseTimeMs: 1000 },
+      { targetId: 10, answerId: 13, points: 700, responseTimeMs: 1000 },
+      { targetId: 10, answerId: 14, points: 600, responseTimeMs: 1000 },
+      { targetId: 10, answerId: 12, points: 800, responseTimeMs: 1000 },
+      { targetId: 10, answerId: 11, points: 900, responseTimeMs: 1000 },
+    ];
+    render(<GameOver rounds={statsRounds} settings={DEFAULT_SETTINGS} onReplay={vi.fn()} />);
+    expect(screen.getByText(/écart moyen/i)).toBeInTheDocument();
+    expect(screen.getByText("2,0")).toBeInTheDocument();
+    expect(screen.getByText(/réponses exactes/i)).toBeInTheDocument();
+    expect(screen.getByText(/génération.*1/i)).toBeInTheDocument();
+  });
+
+  it("n'affiche pas de génération la plus faible sous le seuil minimal d'échantillon", () => {
+    render(<GameOver rounds={rounds} settings={DEFAULT_SETTINGS} onReplay={vi.fn()} />);
+    expect(screen.queryByText(/génération.*plus/i)).not.toBeInTheDocument();
+  });
+
+  // `GameOver` affichait `#{round.targetId}` brut alors que le reste de l'appli passe par
+  // `formatPokedexNumber`, qui complète sur la largeur du pool (3 chiffres sous 1000, 4
+  // au-delà) — ici le pool couvre les générations 1 et 9, donc maxId = 1025.
+  it("formate le numéro de la cible sur la largeur du pool, comme partout ailleurs", () => {
+    const nationalSettings = { ...DEFAULT_SETTINGS, generations: [1, 9] as GenerationId[] };
+    render(<GameOver rounds={nationalRounds} settings={nationalSettings} onReplay={vi.fn()} />);
+    expect(screen.getByText("#0007")).toBeInTheDocument();
+    expect(screen.getByText("#0025")).toBeInTheDocument();
+    expect(screen.getByText("#0150")).toBeInTheDocument();
+    expect(screen.queryByText("#7")).not.toBeInTheDocument();
   });
 });

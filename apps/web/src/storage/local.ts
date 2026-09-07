@@ -3,6 +3,7 @@ export const KEYS = {
   best: "pkfind.best.v1",
   daily: "pkfind.daily.v1",
   dailyHistory: "pkfind.daily-history.v1",
+  soloHistory: "pkfind.solo-history.v1",
   session: "pkfind.session.v1",
 } as const;
 
