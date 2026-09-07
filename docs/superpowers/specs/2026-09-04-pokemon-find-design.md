@@ -451,6 +451,21 @@ lobby ──room:start──▶ countdown ──(3 s)──▶ round ──┬�
 Seul l'hôte peut modifier les réglages, démarrer et relancer. Les réglages sont verrouillés
 hors de l'état `lobby`.
 
+**Rejouer la même série.** Depuis le classement final, l'hôte choisit entre une nouvelle
+partie et un rejeu de la série qui vient d'être jouée — la revanche sur les mêmes dix
+numéros, où les scores deviennent comparables. La room retient pour cela la **graine** de
+la partie précédente, jamais les numéros tirés : la graine suffit à les reproduire.
+
+Le mode retenu (`replayMode`, valant `"new"`, `"same"` ou `null` tant qu'aucune partie n'a
+eu lieu) circule dans `RoomState`, donc tous les joueurs le voient dans le lobby avant que
+l'hôte ne lance. Modifier les générations annule un rejeu en attente et repasse en
+`"new"` : rejouer une graine contre un pool différent tirerait d'autres numéros tout en
+prétendant rejouer les mêmes.
+
+Le mode survit à un abandon en cours de partie (§8.7) sans être remis à zéro, au même
+titre que les réglages : il reflète le dernier choix explicite de l'hôte, et le lobby
+l'affiche toujours avant qu'une partie ne démarre.
+
 ### 8.5 Déroulement d'une manche
 
 1. Le serveur émet `round:start` avec `targetId`, `endsAt` et `serverNow`. Le client
