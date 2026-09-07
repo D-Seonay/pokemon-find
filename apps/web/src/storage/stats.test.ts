@@ -4,7 +4,9 @@ import { KEYS } from "./local.js";
 import {
   MIN_GENERATION_SAMPLE,
   SOLO_HISTORY_LIMIT,
+  type SoloHistoryEntry,
   computeStats,
+  generationBreakdown,
   readSoloHistory,
   readSoloStats,
   recordSoloGame,
@@ -136,5 +138,72 @@ describe("readSoloStats", () => {
     const stats = readSoloStats();
     expect(stats.roundsPlayed).toBe(2);
     expect(stats.exactHits).toBe(1);
+  });
+});
+
+describe("generationBreakdown", () => {
+  it("trie les générations du plus mauvais écart au meilleur", () => {
+    // Bulbizarre #1 est gén. 1, Héricendre #155 est gén. 2.
+    const history: SoloHistoryEntry[] = [
+      {
+        date: "2026-09-01T10:00:00.000Z",
+        rounds: [
+          { targetId: 1, gap: 2 },
+          { targetId: 4, gap: 4 },
+          { targetId: 155, gap: 40 },
+          { targetId: 158, gap: 60 },
+        ],
+      },
+    ];
+
+    const rows = generationBreakdown(history);
+    expect(rows.map((row) => row.generation)).toEqual([2, 1]);
+    expect(rows[0]?.averageGap).toBe(50);
+    expect(rows[1]?.averageGap).toBe(3);
+  });
+
+  it("garde une génération sous-échantillonnée mais la marque comme non significative", () => {
+    const history: SoloHistoryEntry[] = [
+      {
+        date: "2026-09-01T10:00:00.000Z",
+        rounds: [
+          { targetId: 1, gap: 1 },
+          { targetId: 2, gap: 1 },
+          { targetId: 3, gap: 1 },
+          { targetId: 4, gap: 1 },
+          { targetId: 5, gap: 1 },
+          { targetId: 155, gap: 900 },
+        ],
+      },
+    ];
+
+    const rows = generationBreakdown(history);
+    const gen2 = rows.find((row) => row.generation === 2);
+    const gen1 = rows.find((row) => row.generation === 1);
+    // La gén. 2 a le pire écart mais une seule manche : présente, non significative.
+    expect(gen2).toMatchObject({ roundsPlayed: 1, significant: false });
+    expect(gen1).toMatchObject({ roundsPlayed: 5, significant: true });
+    // Et elle ne devient donc pas « la génération à travailler ».
+    expect(computeStats(history).weakestGeneration).toBe(1);
+  });
+
+  it("ignore les timeouts, qui n'ont pas d'écart mesurable", () => {
+    const history: SoloHistoryEntry[] = [
+      {
+        date: "2026-09-01T10:00:00.000Z",
+        rounds: [
+          { targetId: 1, gap: 10 },
+          { targetId: 2, gap: null },
+        ],
+      },
+    ];
+
+    const rows = generationBreakdown(history);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ roundsPlayed: 1, averageGap: 10 });
+  });
+
+  it("renvoie une liste vide sans historique", () => {
+    expect(generationBreakdown([])).toEqual([]);
   });
 });

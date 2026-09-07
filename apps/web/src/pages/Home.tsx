@@ -42,6 +42,9 @@ export function Home() {
         <Button variant="ghost" onClick={() => go("/pokedex")}>
           Pokédex
         </Button>
+        <Button variant="ghost" onClick={() => go("/stats")}>
+          Statistiques
+        </Button>
       </div>
     </section>
   );

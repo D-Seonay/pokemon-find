@@ -31,6 +31,15 @@ export const SOLO_HISTORY_LIMIT = 50;
  */
 export const MIN_GENERATION_SAMPLE = 5;
 
+/** Le détail d'une génération dans le bilan, pour montrer d'où sort la conclusion. */
+export type GenerationStat = {
+  generation: GenerationId;
+  roundsPlayed: number;
+  averageGap: number;
+  /** `false` tant que la génération n'a pas atteint `MIN_GENERATION_SAMPLE` manches. */
+  significant: boolean;
+};
+
 export type SoloStats = {
   /** Nombre de manches historisées avec une réponse effective (hors timeouts). */
   roundsPlayed: number;
@@ -128,4 +137,34 @@ export function computeStats(history: readonly SoloHistoryEntry[]): SoloStats {
 /** Lit l'historique stocké et en dérive les statistiques. */
 export function readSoloStats(): SoloStats {
   return computeStats(readSoloHistory());
+}
+
+/**
+ * Le bilan génération par génération, trié du plus mauvais écart au meilleur. Les
+ * générations sous le seuil d'échantillon sont conservées et marquées `significant:
+ * false` plutôt que masquées : cacher une ligne donnerait l'impression que la génération
+ * n'a jamais été jouée, alors que le joueur l'a bien vue — simplement pas assez pour en
+ * conclure quoi que ce soit.
+ */
+export function generationBreakdown(history: readonly SoloHistoryEntry[]): GenerationStat[] {
+  const byGeneration = new Map<GenerationId, { total: number; count: number }>();
+  for (const game of history) {
+    for (const round of game.rounds) {
+      if (round.gap === null) continue;
+      const gen = generationOf(round.targetId);
+      const bucket = byGeneration.get(gen) ?? { total: 0, count: 0 };
+      bucket.total += round.gap;
+      bucket.count += 1;
+      byGeneration.set(gen, bucket);
+    }
+  }
+
+  return [...byGeneration.entries()]
+    .map(([generation, bucket]) => ({
+      generation,
+      roundsPlayed: bucket.count,
+      averageGap: bucket.total / bucket.count,
+      significant: bucket.count >= MIN_GENERATION_SAMPLE,
+    }))
+    .sort((a, b) => b.averageGap - a.averageGap);
 }
