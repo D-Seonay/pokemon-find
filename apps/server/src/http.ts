@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import compression from "compression";
 import express from "express";
 import type { Config } from "./config.js";
 
@@ -11,6 +12,13 @@ export function createHttpApp(
   stats: () => { rooms: number; players: number },
 ): express.Express {
   const app = express();
+
+  // Le bundle du front fait ~534 Ko bruts pour ~125 Ko compressés : sans ce middleware,
+  // chaque joueur télécharge la version brute, y compris le dataset des 1025 Pokémon.
+  // Placé avant toute route pour couvrir les assets, l'index de la SPA et /healthz.
+  // En dessous du seuil par défaut (1 Ko), `compression` laisse passer tel quel — comprimer
+  // coûterait plus que ça ne rapporte —, et un client qui n'annonce pas gzip reçoit l'original.
+  app.use(compression());
 
   app.get("/healthz", (_request, response) => {
     response.json({ status: "ok", uptimeMs: Date.now() - startedAt, ...stats() });

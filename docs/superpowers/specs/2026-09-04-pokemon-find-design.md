@@ -753,6 +753,11 @@ pokemon-find/
 | `/assets/*`       | GET     | fichiers statiques du build front, `Cache-Control: public, max-age=31536000, immutable` |
 | toute autre route | GET     | `index.html`, `Cache-Control: no-cache` (fallback SPA)                                  |
 
+Toutes ces réponses passent par le middleware `compression`, monté avant les routes.
+Un client qui annonce `Accept-Encoding: gzip` reçoit `Content-Encoding: gzip` ; un client
+qui ne l'annonce pas reçoit l'original. En dessous de 1 Ko, la réponse part telle quelle.
+Mesuré sur le bundle réel : 538 449 octets sans compression, 125 970 avec, soit 4,3×.
+
 Aucune autre API HTTP n'existe : le jeu passe intégralement par le WebSocket.
 
 ---
