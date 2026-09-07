@@ -183,9 +183,9 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
 
     socket.on(
       "room:playAgain",
-      safe<Record<string, never>, { state: RoomState }>(() => {
+      safe<{ sameSeries: boolean }, { state: RoomState }>(({ sameSeries }) => {
         const room = currentRoom();
-        room.playAgain(selfId());
+        room.playAgain(selfId(), sameSeries === true);
         return { state: room.toState() };
       }),
     );

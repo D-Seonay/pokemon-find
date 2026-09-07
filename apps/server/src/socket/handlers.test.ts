@@ -52,6 +52,26 @@ function once<T>(
   return new Promise((resolve) => socket.once(event as never, resolve as never));
 }
 
+/**
+ * Attend le premier `room:state` dont le `status` correspond, en ignorant ceux qui
+ * précèdent (une manche produit plusieurs diffusions — réponses, révélation — avant
+ * d'atteindre l'état recherché). Plus robuste qu'un simple `once` quand on ne peut pas
+ * garantir combien de diffusions intermédiaires un socket donné aura déjà reçues.
+ */
+function untilStatus(
+  socket: Socket<ServerToClientEvents, ClientToServerEvents>,
+  status: RoomState["status"],
+): Promise<RoomState> {
+  return new Promise((resolve) => {
+    const handler = (state: RoomState) => {
+      if (state.status !== status) return;
+      socket.off("room:state", handler);
+      resolve(state);
+    };
+    socket.on("room:state", handler);
+  });
+}
+
 beforeEach(async () => {
   httpServer = createServer();
   io = new Server(httpServer);
@@ -467,6 +487,87 @@ describe("handlers Socket.IO", () => {
       )
       .toBe(true);
   }, 20_000);
+
+  it("expose à tous les joueurs le mode de relecture choisi par l'hôte", async () => {
+    const host = client();
+    const created = await emit<"room:create", JoinPayload>(host, "room:create", {
+      nickname: "Mathéo",
+      settings: { ...DEFAULT_SETTINGS, generations: [1], roundCount: 5 },
+    });
+    if (!created.ok) throw new Error("création échouée");
+    const guest = client();
+    await emit(guest, "room:join", { roomCode: created.data.roomCode, nickname: "Léa" });
+
+    await emit(host, "room:start", {});
+    for (let index = 0; index < 5; index++) {
+      const started = await once<{ roundIndex: number; targetId: number }>(host, "round:start");
+      await emit(host, "round:answer", {
+        roundIndex: started.roundIndex,
+        pokemonId: started.targetId,
+      });
+      await emit(guest, "round:answer", {
+        roundIndex: started.roundIndex,
+        pokemonId: started.targetId === 1 ? 2 : 1,
+      });
+    }
+    // La dernière manche diffuse encore un `room:state` "reveal" avant celui "finished" : on
+    // attend explicitement ce dernier côté invité, pour ne pas confondre l'un des deux avec
+    // celui qui suivra `room:playAgain`.
+    const guestSeesFinished = untilStatus(guest, "finished");
+    await once(host, "game:end");
+    await guestSeesFinished;
+
+    const guestSeesLobby = untilStatus(guest, "lobby");
+    const replayAck = await emit<"room:playAgain", { state: RoomState }>(host, "room:playAgain", {
+      sameSeries: true,
+    });
+    expect(replayAck.ok).toBe(true);
+    if (replayAck.ok) expect(replayAck.data.state.replayMode).toBe("same");
+
+    const stateSeenByGuest = await guestSeesLobby;
+    expect(stateSeenByGuest.replayMode).toBe("same");
+  });
+
+  it("rejoue la série identique de numéros après room:playAgain avec sameSeries", async () => {
+    const host = client();
+    const created = await emit<"room:create", JoinPayload>(host, "room:create", {
+      nickname: "Mathéo",
+      settings: { ...DEFAULT_SETTINGS, generations: [1], roundCount: 5 },
+    });
+    if (!created.ok) throw new Error("création échouée");
+    const guest = client();
+    await emit(guest, "room:join", { roomCode: created.data.roomCode, nickname: "Léa" });
+
+    async function playGame(): Promise<number[]> {
+      const targets: number[] = [];
+      const ended = once(host, "game:end");
+      await emit(host, "room:start", {});
+      for (let index = 0; index < 5; index++) {
+        const started = await once<{ roundIndex: number; targetId: number }>(host, "round:start");
+        targets.push(started.targetId);
+        await emit(host, "round:answer", {
+          roundIndex: started.roundIndex,
+          pokemonId: started.targetId,
+        });
+        await emit(guest, "round:answer", {
+          roundIndex: started.roundIndex,
+          pokemonId: started.targetId === 1 ? 2 : 1,
+        });
+      }
+      await ended;
+      return targets;
+    }
+
+    const firstSeries = await playGame();
+
+    const replayAck = await emit<"room:playAgain", { state: RoomState }>(host, "room:playAgain", {
+      sameSeries: true,
+    });
+    expect(replayAck.ok).toBe(true);
+
+    const secondSeries = await playGame();
+    expect(secondSeries).toEqual(firstSeries);
+  }, 15_000);
 
   it("déconnecte un socket après trois violations de la limite de débit", async () => {
     const host = client();

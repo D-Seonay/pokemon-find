@@ -19,6 +19,14 @@ export type RoomState = {
   players: PlayerPublic[];
   roundIndex: number;
   roundCount: number;
+  /**
+   * Mode retenu pour la prochaine partie (ou la partie en cours) : `null` tant que la room
+   * n'a jamais joué — il n'y a alors rien à rejouer, la question ne se pose pas encore.
+   * `"same"` réutilise la graine de la dernière partie jouée (mêmes cibles, même ordre) ;
+   * `"new"` en tire une nouvelle. Fixé par `room:playAgain`, visible de tous en lobby avant
+   * que l'hôte ne relance.
+   */
+  replayMode: "new" | "same" | null;
 };
 
 export type RoundResult = {
@@ -111,7 +119,8 @@ export type ClientToServerEvents = {
   ) => void;
   "room:start": (input: Record<string, never>, ack: (result: Ack<null>) => void) => void;
   "room:playAgain": (
-    input: Record<string, never>,
+    /** `sameSeries: true` rejoue la série de cibles de la partie qui vient de se terminer. */
+    input: { sameSeries: boolean },
     ack: (result: Ack<{ state: RoomState }>) => void,
   ) => void;
   "round:answer": (

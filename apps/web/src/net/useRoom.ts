@@ -53,7 +53,8 @@ export type RoomView = {
      */
     setSettings: (settings: GameSettings, onSettled?: (ack: Ack<unknown>) => void) => void;
     answer: (pokemonId: number) => void;
-    playAgain: () => void;
+    /** `sameSeries: true` rejoue la série de cibles de la partie qui vient de se terminer. */
+    playAgain: (sameSeries: boolean) => void;
     leave: () => void;
     dismissActionError: () => void;
   };
@@ -277,15 +278,13 @@ export function useRoom(input: {
     };
   }, []);
 
-  const emitSimple = useCallback((event: "room:start" | "room:playAgain" | "room:leave") => {
+  const emitSimple = useCallback((event: "room:start" | "room:leave") => {
     const socket = getSocket();
     const onAck = (ack: Ack<unknown>) => {
       setActionError(ack.ok ? null : ack.message);
     };
     if (event === "room:start") {
       socket.emit("room:start", {}, onAck);
-    } else if (event === "room:playAgain") {
-      socket.emit("room:playAgain", {}, onAck);
     } else {
       socket.emit("room:leave", {}, onAck);
     }
@@ -304,9 +303,11 @@ export function useRoom(input: {
     final,
     actions: {
       start: () => emitSimple("room:start"),
-      playAgain: () => {
+      playAgain: (sameSeries) => {
         setFinal(null);
-        emitSimple("room:playAgain");
+        getSocket().emit("room:playAgain", { sameSeries }, (ack) => {
+          setActionError(ack.ok ? null : ack.message);
+        });
       },
       leave: () => emitSimple("room:leave"),
       dismissActionError: () => setActionError(null),

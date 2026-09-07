@@ -118,6 +118,10 @@ export class Room {
   private revealStartedAt = 0;
   private timer: NodeJS.Timeout | null = null;
   protected currentRoundIndex = -1;
+  /** Graine de la dernière partie effectivement démarrée ; `null` tant qu'aucune ne l'a été. */
+  private lastGameSeed: string | null = null;
+  /** Mode retenu par `room:playAgain` pour la prochaine partie. Voir `RoomState.replayMode`. */
+  private replayMode: "new" | "same" | null = null;
 
   constructor(
     readonly code: string,
@@ -208,6 +212,10 @@ export class Room {
     } catch {
       throw new RoomError("INVALID_SETTINGS");
     }
+    // Changer les réglages (générations, notamment) change le pool sur lequel `pickTargets`
+    // tire : rejouer la graine précédente ne reproduirait plus la même série. On retombe
+    // donc sur une série neuve plutôt que de tenir une promesse qu'on ne peut plus honorer.
+    if (this.replayMode === "same") this.replayMode = "new";
     this.emitState();
   }
 
@@ -230,11 +238,16 @@ export class Room {
     if (this.connectedCount < MIN_PLAYERS_TO_START) throw new RoomError("NOT_ENOUGH_PLAYERS");
 
     this.pool = buildPool(this.settings.generations);
-    this.targets = pickTargets(
-      this.pool.ids,
-      this.settings.roundCount,
-      rngFromSeed(this.newGameSeed()),
-    );
+    // Rejoue la graine de la partie précédente si l'hôte a choisi "même série" ; en tire une
+    // nouvelle sinon (comportement historique). `lastGameSeed` ne peut être `null` ici que si
+    // `replayMode` vaut "same" par un chemin qui contournerait `playAgain` : on retombe alors
+    // sur une graine neuve plutôt que de planter.
+    const seed =
+      this.replayMode === "same" && this.lastGameSeed !== null
+        ? this.lastGameSeed
+        : this.newGameSeed();
+    this.lastGameSeed = seed;
+    this.targets = pickTargets(this.pool.ids, this.settings.roundCount, rngFromSeed(seed));
     this.history = [];
     this.currentRoundIndex = -1;
     for (const player of this.players) {
@@ -273,9 +286,16 @@ export class Room {
     }
   }
 
-  playAgain(playerId: string): void {
+  /**
+   * `sameSeries` : rejoue la série de cibles de la partie qui vient de se terminer (même
+   * graine, donc mêmes numéros dans le même ordre) plutôt que d'en tirer une nouvelle.
+   * Toujours possible ici : atteindre l'état `finished` exige d'avoir déjà démarré une
+   * partie, donc d'avoir déjà une graine à rejouer.
+   */
+  playAgain(playerId: string, sameSeries = false): void {
     this.assertHost(playerId);
     if (this.state !== "finished") throw new RoomError("GAME_IN_PROGRESS");
+    this.replayMode = sameSeries ? "same" : "new";
     this.resetToLobby();
   }
 
@@ -299,6 +319,7 @@ export class Room {
       })),
       roundIndex: this.currentRoundIndex,
       roundCount: this.settings.roundCount,
+      replayMode: this.replayMode,
     };
   }
 

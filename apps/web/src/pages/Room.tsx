@@ -63,7 +63,16 @@ export function Room() {
             standings={room.final.standings}
             {...(room.playerId ? { highlightPlayerId: room.playerId } : {})}
           />
-          {isHost && <Button onClick={room.actions.playAgain}>Rejouer</Button>}
+          {isHost && (
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button onClick={() => room.actions.playAgain(true)}>
+                Rejouer les mêmes numéros
+              </Button>
+              <Button variant="ghost" onClick={() => room.actions.playAgain(false)}>
+                Nouvelle partie
+              </Button>
+            </div>
+          )}
         </section>
       );
     }
@@ -144,6 +153,13 @@ export function Room() {
             </li>
           ))}
         </ul>
+        {state.replayMode !== null && (
+          <p className="text-sm text-[var(--text-dim)]">
+            {state.replayMode === "same"
+              ? "Prochaine partie : mêmes numéros que la précédente."
+              : "Prochaine partie : nouvelle série de numéros."}
+          </p>
+        )}
         {isHost ? (
           <GenerationPicker
             value={pendingGenerations ?? state.settings.generations}
