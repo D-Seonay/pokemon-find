@@ -31,11 +31,19 @@ describe("dataset", () => {
     }
   });
 
-  it("a une URL de sprite conforme", () => {
+  it("pointe vers un sprite servi par nous, sans hôte externe", () => {
     for (const p of POKEMON) {
-      expect(p.spriteUrl).toBe(
-        `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${p.id}.png`,
-      );
+      expect(p.spriteUrl).toBe(`/sprites/${p.id}.png`);
+    }
+  });
+
+  // Le jeu doit rester jouable sur un réseau qui bloque GitHub, et l'IP des joueurs n'a
+  // pas à partir chez un tiers à chaque manche. Cette garde attrape une régénération du
+  // dataset qui réintroduirait une URL absolue.
+  it("n'appelle aucun hôte externe pour ses images", () => {
+    for (const p of POKEMON) {
+      expect(p.spriteUrl.startsWith("/")).toBe(true);
+      expect(p.spriteUrl).not.toContain("//");
     }
   });
 

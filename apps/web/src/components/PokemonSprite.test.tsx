@@ -17,6 +17,20 @@ describe("PokemonSprite", () => {
     expect(screen.getByText("P")).toBeInTheDocument();
   });
 
+  // Les sprites font 96 px de côté. Au-delà, le lissage par défaut les rend flous ; en
+  // dessous, c'est lui qui rend la réduction lisible. Le rendu suit donc la taille demandée.
+  it("garde des pixels francs quand l'image est agrandie au-delà de sa taille native", () => {
+    render(<PokemonSprite pokemon={pokemonById(25)} size={160} />);
+    expect(screen.getByRole("img", { name: "Pikachu" })).toHaveStyle({
+      imageRendering: "pixelated",
+    });
+  });
+
+  it("laisse le navigateur lisser les vignettes réduites du Pokédex", () => {
+    render(<PokemonSprite pokemon={pokemonById(25)} size={40} />);
+    expect(screen.getByRole("img", { name: "Pikachu" })).toHaveStyle({ imageRendering: "auto" });
+  });
+
   it("n'expose jamais le numéro national en texte ou en infobulle", () => {
     const { container } = render(<PokemonSprite pokemon={pokemonById(25)} />);
     expect(container.textContent ?? "").not.toContain("25");

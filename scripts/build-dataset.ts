@@ -3,8 +3,10 @@ import { generationOf, MAX_POKEMON_ID } from "../packages/shared/src/domain/gene
 import { normalizeName } from "../packages/shared/src/domain/names.js";
 
 const OUT = new URL("../packages/shared/src/data/pokemon.json", import.meta.url);
-const SPRITE = (id: number) =>
-  `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+// Chemin servi par notre propre serveur, alimenté par `scripts/fetch-sprites.ts` :
+// le jeu n'atteint aucun hôte externe à l'exécution. Voir ce script pour le choix
+// de la petite variante plutôt que de l'illustration haute résolution.
+const SPRITE = (id: number) => `/sprites/${id}.png`;
 
 type SpeciesName = { name: string; language: { name: string } };
 

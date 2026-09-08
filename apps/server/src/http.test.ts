@@ -158,3 +158,42 @@ describe("HTTP compression", () => {
     expect(response.headers["content-encoding"]).toBe("gzip");
   });
 });
+
+describe("HTTP sprites auto-hébergés", () => {
+  let baseUrl = "";
+  let server: Server;
+  let webDir: string;
+
+  beforeAll(async () => {
+    webDir = mkdtempSync(join(tmpdir(), "pkfind-http-test-sprites-"));
+    mkdirSync(join(webDir, "sprites"));
+    writeFileSync(join(webDir, "index.html"), "<!doctype html><title>pkfind</title>");
+    // Un PNG minimal valide suffit : on teste le service du fichier, pas son contenu.
+    writeFileSync(join(webDir, "sprites", "143.png"), Buffer.from("89504e470d0a1a0a", "hex"));
+    ({ baseUrl, server } = await startApp(webDir));
+  });
+
+  afterAll(async () => {
+    await stopApp(server);
+    rmSync(webDir, { recursive: true, force: true });
+  });
+
+  it("sert un sprite avec un cache long, pour éviter 1025 requêtes par visite du Pokédex", async () => {
+    const response = await fetch(`${baseUrl}/sprites/143.png`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("image/png");
+    expect(response.headers.get("cache-control")).toContain("max-age=2592000");
+  });
+
+  it("ne marque pas les sprites immutable, pour qu'une régénération puisse être rattrapée", async () => {
+    const response = await fetch(`${baseUrl}/sprites/143.png`);
+    expect(response.headers.get("cache-control")).not.toContain("immutable");
+  });
+
+  it("renvoie 404 sur un sprite absent plutôt que la page d'accueil", async () => {
+    const response = await fetch(`${baseUrl}/sprites/9999.png`);
+    expect(response.status).toBe(404);
+    // Le piège évité : sans garde, le repli SPA renverrait index.html en 200.
+    expect(await response.text()).not.toContain("pkfind");
+  });
+});

@@ -36,11 +36,21 @@ export function createHttpApp(
         immutable: true,
       }),
     );
+    // Les sprites sont auto-hébergés (voir `scripts/fetch-sprites.ts`) et leur nom est
+    // stable : `/sprites/143.png` sera toujours Ronflex. On les met donc en cache long,
+    // sinon le Pokédex — 1025 vignettes — déclencherait autant de requêtes conditionnelles
+    // à chaque visite. Pas d'`immutable` en revanche, contrairement à `/assets` dont le nom
+    // porte un hachage : si le dataset est régénéré un jour, une revalidation doit pouvoir
+    // rattraper l'image, ce qu'`immutable` interdirait jusqu'à expiration.
+    app.use("/sprites", express.static(join(webDir, "sprites"), { maxAge: "30d" }));
     app.use(express.static(webDir, { index: false, maxAge: 0 }));
   }
 
   app.get("*", (request, response) => {
-    if (request.path.startsWith("/assets/")) {
+    // Un asset ou un sprite manquant doit répondre 404, pas retomber sur le repli SPA :
+    // sans cette garde, `<img src="/sprites/9999.png">` recevrait `index.html` avec un
+    // statut 200 — une page HTML servie comme une image.
+    if (request.path.startsWith("/assets/") || request.path.startsWith("/sprites/")) {
       response.status(404).end();
       return;
     }

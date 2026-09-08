@@ -84,15 +84,24 @@ type Pokemon = {
 };
 ```
 
-`spriteUrl` pointe vers l'artwork officiel hébergé par le dépôt public de PokeAPI :
+`spriteUrl` pointe vers un chemin servi par notre propre serveur :
 
 ```
-https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/{id}.png
+/sprites/{id}.png
 ```
 
-Les images sont donc chargées depuis un CDN externe au runtime ; seules les **données
-textuelles** sont locales. Le jeu reste jouable si les images ne chargent pas : chaque
-`<img>` a un `onError` qui affiche à la place une pastille avec l'initiale du Pokémon.
+Les 1025 sprites sont versionnés dans `apps/web/public/sprites/` et récupérés une fois
+pour toutes par `scripts/fetch-sprites.ts`. **Le jeu n'atteint aucun hôte externe au
+runtime** : ni pour les données, ni pour les images. Il reste donc jouable sur un réseau
+qui bloque GitHub, et l'adresse IP des joueurs ne part chez aucun tiers.
+
+La variante retenue est le sprite 96 px (`sprites/pokemon/{id}.png`), et non l'illustration
+haute résolution : ~1,5 Ko contre ~141 Ko par image, soit 1,04 Mo pour l'ensemble contre
+environ 137 Mo. Au-delà de 96 px — la révélation, affichée à 140-160 px — le rendu passe en
+`image-rendering: pixelated`, le lissage du navigateur donnant sinon une image floue.
+
+Le repli reste en place : chaque `<img>` a un `onError` qui affiche une pastille avec
+l'initiale du Pokémon, désormais réservé à un fichier réellement manquant.
 
 ### 4.2 Bornes de générations
 
