@@ -167,9 +167,11 @@ describe("HTTP sprites auto-hébergés", () => {
   beforeAll(async () => {
     webDir = mkdtempSync(join(tmpdir(), "pkfind-http-test-sprites-"));
     mkdirSync(join(webDir, "sprites"));
+    mkdirSync(join(webDir, "fonts"));
     writeFileSync(join(webDir, "index.html"), "<!doctype html><title>pkfind</title>");
     // Un PNG minimal valide suffit : on teste le service du fichier, pas son contenu.
     writeFileSync(join(webDir, "sprites", "143.png"), Buffer.from("89504e470d0a1a0a", "hex"));
+    writeFileSync(join(webDir, "fonts", "outfit-400-latin.woff2"), Buffer.from("774f4632", "hex"));
     ({ baseUrl, server } = await startApp(webDir));
   });
 
@@ -194,6 +196,38 @@ describe("HTTP sprites auto-hébergés", () => {
     const response = await fetch(`${baseUrl}/sprites/9999.png`);
     expect(response.status).toBe(404);
     // Le piège évité : sans garde, le repli SPA renverrait index.html en 200.
+    expect(await response.text()).not.toContain("pkfind");
+  });
+});
+
+describe("HTTP polices auto-hébergées", () => {
+  let baseUrl = "";
+  let server: Server;
+  let webDir: string;
+
+  beforeAll(async () => {
+    webDir = mkdtempSync(join(tmpdir(), "pkfind-http-test-fonts-"));
+    mkdirSync(join(webDir, "fonts"));
+    writeFileSync(join(webDir, "index.html"), "<!doctype html><title>pkfind</title>");
+    writeFileSync(join(webDir, "fonts", "outfit-400-latin.woff2"), Buffer.from("774f4632", "hex"));
+    ({ baseUrl, server } = await startApp(webDir));
+  });
+
+  afterAll(async () => {
+    await stopApp(server);
+    rmSync(webDir, { recursive: true, force: true });
+  });
+
+  it("sert une police avec un cache long", async () => {
+    const response = await fetch(`${baseUrl}/fonts/outfit-400-latin.woff2`);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toContain("max-age=2592000");
+  });
+
+  it("renvoie 404 sur une police absente plutôt que la page d'accueil", async () => {
+    const response = await fetch(`${baseUrl}/fonts/inexistante.woff2`);
+    expect(response.status).toBe(404);
+    // Sans garde, le repli SPA renverrait index.html en 200 — du HTML servi comme police.
     expect(await response.text()).not.toContain("pkfind");
   });
 });

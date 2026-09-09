@@ -43,6 +43,9 @@ export function createHttpApp(
     // porte un hachage : si le dataset est régénéré un jour, une revalidation doit pouvoir
     // rattraper l'image, ce qu'`immutable` interdirait jusqu'à expiration.
     app.use("/sprites", express.static(join(webDir, "sprites"), { maxAge: "30d" }));
+    // Même raisonnement pour les polices auto-hébergées (`scripts/fetch-fonts.ts`) :
+    // nom stable, contenu figé, et elles bloquent l'affichage du texte si elles tardent.
+    app.use("/fonts", express.static(join(webDir, "fonts"), { maxAge: "30d" }));
     app.use(express.static(webDir, { index: false, maxAge: 0 }));
   }
 
@@ -50,7 +53,11 @@ export function createHttpApp(
     // Un asset ou un sprite manquant doit répondre 404, pas retomber sur le repli SPA :
     // sans cette garde, `<img src="/sprites/9999.png">` recevrait `index.html` avec un
     // statut 200 — une page HTML servie comme une image.
-    if (request.path.startsWith("/assets/") || request.path.startsWith("/sprites/")) {
+    if (
+      request.path.startsWith("/assets/") ||
+      request.path.startsWith("/sprites/") ||
+      request.path.startsWith("/fonts/")
+    ) {
       response.status(404).end();
       return;
     }
