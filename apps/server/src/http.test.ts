@@ -231,3 +231,44 @@ describe("HTTP polices auto-hébergées", () => {
     expect(await response.text()).not.toContain("pkfind");
   });
 });
+
+describe("HTTP en-têtes de sécurité", () => {
+  let baseUrl = "";
+  let server: Server;
+  let webDir: string;
+
+  beforeAll(async () => {
+    webDir = mkdtempSync(join(tmpdir(), "pkfind-http-test-headers-"));
+    writeFileSync(join(webDir, "index.html"), "<!doctype html><title>pkfind</title>");
+    ({ baseUrl, server } = await startApp(webDir));
+  });
+
+  afterAll(async () => {
+    await stopApp(server);
+    rmSync(webDir, { recursive: true, force: true });
+  });
+
+  it("interdit l'encadrement du jeu dans une iframe tierce", async () => {
+    const response = await fetch(`${baseUrl}/`);
+    expect(response.headers.get("content-security-policy")).toContain("frame-ancestors 'none'");
+  });
+
+  it("empêche le navigateur de deviner un type de contenu", async () => {
+    const response = await fetch(`${baseUrl}/`);
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+
+  it("n'autorise aucune origine tierce dans la CSP", async () => {
+    const csp = (await fetch(`${baseUrl}/`)).headers.get("content-security-policy") ?? "";
+    expect(csp).toContain("default-src 'self'");
+    expect(csp).toContain("font-src 'self'");
+    // La garde qui compte : l'auto-hébergement des polices et des sprites doit rester la
+    // seule source. Un `https://` ici signifierait qu'une dépendance externe est revenue.
+    expect(csp).not.toContain("https://");
+  });
+
+  it("couvre aussi /healthz, monté avant les fichiers statiques", async () => {
+    const response = await fetch(`${baseUrl}/healthz`);
+    expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+});

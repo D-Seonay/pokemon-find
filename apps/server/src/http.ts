@@ -3,6 +3,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import compression from "compression";
 import express from "express";
+import helmet from "helmet";
 import type { Config } from "./config.js";
 
 const startedAt = Date.now();
@@ -12,6 +13,39 @@ export function createHttpApp(
   stats: () => { rooms: number; players: number },
 ): express.Express {
   const app = express();
+
+  // Le serveur est public. Rien de sensible n'y transite — ni compte, ni session, ni
+  // paiement — mais sans ces en-têtes le jeu est encadrable dans une iframe par n'importe
+  // quel site, et un fichier au type inattendu peut être réinterprété par le navigateur.
+  //
+  // La CSP est en `'self'` partout, ce que l'auto-hébergement des sprites et des polices
+  // a rendu possible : plus aucune origine tierce à autoriser.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          // Aucun script inline : Vite ne produit que des fichiers hachés sous /assets.
+          scriptSrc: ["'self'"],
+          // `'unsafe-inline'` est ici incontournable et non cosmétique : le front utilise
+          // treize `style={{ ... }}` React, qui deviennent des attributs `style` — bloqués
+          // sans cette autorisation. La retirer demanderait de convertir ces treize
+          // emplacements en classes, ce qui n'est pas le sujet de cette issue.
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", "data:"],
+          fontSrc: ["'self'"],
+          // Socket.IO se connecte à la même origine : le WebSocket est couvert par `'self'`.
+          connectSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+      // L'en-tête n'apporte rien ici — tout est servi par la même origine — et casse
+      // le chargement des ressources si une exception apparaît plus tard.
+      crossOriginEmbedderPolicy: false,
+    }),
+  );
 
   // Le bundle du front fait ~534 Ko bruts pour ~125 Ko compressés : sans ce middleware,
   // chaque joueur télécharge la version brute, y compris le dataset des 1025 Pokémon.

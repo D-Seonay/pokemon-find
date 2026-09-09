@@ -12,6 +12,7 @@
     "@pkfind/shared": "workspace:*",
     "compression": "^1.7.4",
     "express": "^4.21.0",
+    "helmet": "^8.0.0",
     "socket.io": "^4.8.0"
   },
   "devDependencies": {
