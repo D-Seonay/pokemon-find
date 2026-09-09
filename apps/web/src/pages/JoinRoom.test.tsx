@@ -118,4 +118,54 @@ describe("JoinRoom", () => {
 
     expect(screen.getByRole("button", { name: "Rejoindre" })).toBeDisabled();
   });
+  // #11 : le bouton ne se contentait que de la longueur, alors que le serveur impose un
+  // alphabet précis (ni I, ni O, ni 0, ni 1 — les caractères qu'on confond à l'oral).
+  // Un code comme « 12!@ » naviguait, ouvrait une connexion, et se faisait rejeter.
+  it("refuse un caractère hors alphabet au lieu de le laisser naviguer", async () => {
+    const user = userEvent.setup();
+    renderJoinRoom();
+
+    await user.type(screen.getByLabelText("Code de la room"), "12!@");
+    await user.type(screen.getByLabelText("Ton pseudo"), "Mathéo");
+    expect(screen.getByRole("button", { name: "Rejoindre" })).toBeDisabled();
+  });
+
+  it("écarte O et 0 de la saisie, qui n'appartiennent pas à l'alphabet des codes", async () => {
+    const user = userEvent.setup();
+    renderJoinRoom();
+
+    const field = screen.getByLabelText("Code de la room");
+    await user.type(field, "AO0B");
+    // Seuls A et B survivent : le joueur voit immédiatement que sa saisie ne prend pas.
+    expect(field).toHaveValue("AB");
+  });
+
+  it("explique pourquoi un caractère a été écarté, plutôt que de le faire disparaître", async () => {
+    const user = userEvent.setup();
+    renderJoinRoom();
+
+    await user.type(screen.getByLabelText("Code de la room"), "O");
+    // Le cas réel : un joueur à qui on dicte un code entend « O » et le tape.
+    expect(screen.getByRole("status").textContent).toMatch(/ni I, ni O, ni 0, ni 1/);
+  });
+
+  it("n'affiche aucun avertissement pour une saisie valide", async () => {
+    const user = userEvent.setup();
+    renderJoinRoom();
+
+    await user.type(screen.getByLabelText("Code de la room"), "AB23");
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it("accepte un code collé avec des espaces autour", async () => {
+    const user = userEvent.setup();
+    renderJoinRoom();
+
+    const field = screen.getByLabelText("Code de la room");
+    await user.click(field);
+    await user.paste("  ab23  ");
+    expect(field).toHaveValue("AB23");
+    // Des espaces ne sont pas une erreur de saisie : rien à signaler.
+    expect(screen.queryByRole("status")).toBeNull();
+  });
 });
