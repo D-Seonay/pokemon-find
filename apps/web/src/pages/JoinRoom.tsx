@@ -1,4 +1,4 @@
-import { CODE_LENGTH, isCodeChar, isValidRoomCode, sanitizeRoomCodeInput } from "@pkfind/shared";
+import { isCodeChar, isValidRoomCode, sanitizeRoomCodeInput } from "@pkfind/shared";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button.js";
