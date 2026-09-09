@@ -17,16 +17,20 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # corepack lit le champ `packageManager` du package.json racine : la version de
       # pnpm est donc celle du dépôt, jamais celle du runner.
-      - uses: actions/setup-node@v4
+      #
+      # `node-version` est la version qui exécute NOTRE code ; elle n'a rien à voir avec
+      # le runtime que l'action utilise pour elle-même. C'est ce dernier que la
+      # dépréciation de Node 20 visait, d'où les majeurs relevés ci-dessus.
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: corepack enable
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: ~/.local/share/pnpm/store
           key: pnpm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -50,7 +54,7 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: pnpm test:e2e
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
