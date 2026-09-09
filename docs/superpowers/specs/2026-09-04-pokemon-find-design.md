@@ -91,9 +91,14 @@ type Pokemon = {
 ```
 
 Les 1025 sprites sont versionnés dans `apps/web/public/sprites/` et récupérés une fois
-pour toutes par `scripts/fetch-sprites.ts`. **Le jeu n'atteint aucun hôte externe au
-runtime** : ni pour les données, ni pour les images. Il reste donc jouable sur un réseau
-qui bloque GitHub, et l'adresse IP des joueurs ne part chez aucun tiers.
+pour toutes par `scripts/fetch-sprites.ts`. **Ni les données ni les images n'appellent
+d'hôte externe au runtime** : le jeu reste jouable sur un réseau qui bloque GitHub.
+
+Une dépendance externe subsiste néanmoins, et elle est antérieure : `index.html` charge
+les polices Outfit et Space Mono depuis `fonts.googleapis.com` / `fonts.gstatic.com`
+(~87 Ko de woff2, deux connexions supplémentaires avant le premier texte affiché).
+Tant qu'elle est là, l'adresse IP des joueurs part chez Google à chaque chargement de
+page. Voir l'issue dédiée à leur auto-hébergement.
 
 La variante retenue est le sprite 96 px (`sprites/pokemon/{id}.png`), et non l'illustration
 haute résolution : ~1,5 Ko contre ~141 Ko par image, soit 1,04 Mo pour l'ensemble contre
