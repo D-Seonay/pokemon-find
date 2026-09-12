@@ -1,0 +1,54 @@
+# =============================================================================
+# configure-ingress.yml
+# Route pokemon-find.seonay.eu vers la VM depuis l'ingress Traefik déjà en
+# place sur le cluster k3s de lifeos, hébergé sur le même hôte Proxmox.
+#
+# Aucune règle NAT supplémentaire n'est nécessaire : Traefik écoute déjà
+# 80/443 et route par en-tête Host, donc exposer une application de plus se
+# résume à ajouter une règle de routage applicative.
+#
+# WebSocket : Socket.IO démarre en long-polling HTTP puis bascule en
+# WebSocket. Traefik relaie l'upgrade nativement, sans annotation dédiée, et
+# la question des sessions collantes ne se pose pas ici — il n'y a qu'un seul
+# backend derrière le Service.
+#
+# HTTPS : le certificat est demandé à cert-manager (ClusterIssuer
+# `letsencrypt-prod`, déjà installé sur ce cluster), via l'annotation et le
+# bloc `tls:` du template. Le solveur HTTP-01 a besoin que le port 80 soit
+# joignable depuis Internet, ce qui est déjà le cas.
+#
+# Usage :
+#   ansible-playbook -i ansible/inventory.ini ansible/configure-ingress.yml
+# =============================================================================
+
+- name: Router pokemon-find.seonay.eu vers la VM pokemon-find
+  hosts: k3s
+  become: true
+  gather_facts: false
+
+  vars:
+    app_ip: "10.10.10.52"
+    app_port: 3000
+    ingress_host: "pokemon-find.seonay.eu"
+    kubeconfig: /etc/rancher/k3s/k3s.yaml
+
+  tasks:
+    - name: Générer le manifeste Kubernetes
+      ansible.builtin.template:
+        src: templates/ingress.yml.j2
+        dest: /tmp/pokemon-find-ingress.yml
+        mode: "0644"
+
+    - name: Appliquer le manifeste
+      ansible.builtin.command: kubectl apply -f /tmp/pokemon-find-ingress.yml
+      environment:
+        KUBECONFIG: "{{ kubeconfig }}"
+      changed_when: true
+
+    - name: Résumé
+      ansible.builtin.debug:
+        msg: >-
+          Ingress appliqué. Une fois le DNS de {{ ingress_host }} propagé vers
+          l'IP publique de la Freebox, https://{{ ingress_host }} doit servir
+          le jeu. L'émission du certificat prend généralement moins d'une
+          minute — voir la section HTTPS du README pour la vérifier.

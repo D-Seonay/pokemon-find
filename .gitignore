@@ -10,3 +10,6 @@ test-results/
 playwright-report/
 .vite/
 .superpowers/
+
+# Inventaire Ansible : adresses et détails réseau internes
+ansible/inventory.ini

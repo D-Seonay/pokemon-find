@@ -1,0 +1,15 @@
+# Copier vers ansible/inventory.ini (gitignoré : détails réseau internes).
+#
+# L'hôte Proxmox n'a que du WiFi, sans réservation DHCP statique : son IP peut
+# changer entre deux sessions. Si un playbook part en timeout SSH, vérifie-la
+# dans l'interface de la Freebox et mets-la à jour ici — aux trois endroits
+# (ansible_host du groupe [proxmox], et les deux ProxyJump ci-dessous).
+
+[proxmox]
+proxmox-host ansible_host=192.168.1.253 ansible_user=root
+
+[k3s]
+k3s-host ansible_host=10.10.10.50 ansible_user=debian ansible_ssh_common_args='-o ProxyJump=root@192.168.1.253 -o StrictHostKeyChecking=accept-new'
+
+[pokemon_find]
+pokemon-find-host ansible_host=10.10.10.52 ansible_user=debian ansible_ssh_common_args='-o ProxyJump=root@192.168.1.253 -o StrictHostKeyChecking=accept-new'

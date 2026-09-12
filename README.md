@@ -91,6 +91,24 @@ Pour arrêter :
 docker compose down
 ```
 
+## Déploiement automatisé (Ansible + Proxmox)
+
+Le dossier [`ansible/`](ansible/) contient cinq playbooks qui provisionnent une VM
+Debian sur un hôte Proxmox, y déploient la stack, et l'exposent en HTTPS via l'ingress
+Traefik d'un cluster k3s voisin — même schéma que le déploiement de
+[bardenoa](https://github.com/D-Seonay/openbar) sur le même hôte.
+
+```bash
+cp ansible/inventory.ini.example ansible/inventory.ini
+ansible-playbook -i ansible/inventory.ini ansible/create-proxmox-vm.yml
+ansible-playbook -i ansible/inventory.ini ansible/setup-vm-nat.yml
+ansible-playbook -i ansible/inventory.ini ansible/deploy-pokemon-find.yml
+ansible-playbook -i ansible/inventory.ini ansible/configure-ingress.yml
+```
+
+Le détail — prérequis, réseau, HTTPS, dépannage, et l'avertissement sur le runner
+GitHub auto-hébergé pour un dépôt public — est dans [`ansible/README.md`](ansible/README.md).
+
 ## Tests
 
 | Commande         | Portée                                                                                                                                     |

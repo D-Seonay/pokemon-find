@@ -1,0 +1,49 @@
+# Service sans selector + Endpoints explicites : c'est le moyen de faire
+# proxifier Traefik vers une machine qui ne fait pas partie du cluster. Le
+# Service n'a aucun pod derrière lui, ses Endpoints sont écrits à la main
+# pour pointer sur l'IP de la VM.
+apiVersion: v1
+kind: Service
+metadata:
+  name: pokemon-find
+  namespace: default
+spec:
+  ports:
+    - port: {{ app_port }}
+      targetPort: {{ app_port }}
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: pokemon-find
+  namespace: default
+subsets:
+  - addresses:
+      - ip: {{ app_ip }}
+    ports:
+      - port: {{ app_port }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pokemon-find
+  namespace: default
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - {{ ingress_host }}
+      secretName: pokemon-find-tls
+  rules:
+    - host: {{ ingress_host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: pokemon-find
+                port:
+                  number: {{ app_port }}

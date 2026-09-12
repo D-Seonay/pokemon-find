@@ -1,0 +1,103 @@
+# =============================================================================
+# create-proxmox-vm.yml
+# Crée la VM pokemon-find (Debian 12 cloud image) sur l'hôte Proxmox, via SSH
+# et les commandes `qm` natives — même schéma que les VM lifeos et bardenoa
+# sur ce même hôte. Dimensionnée pour un unique conteneur Node, mais la
+# mémoire est celle du *build* (Vite + tsc sur le monorepo), pas celle du
+# service au repos, qui tient dans bien moins.
+#
+# Idempotent au niveau « tout ou rien » : si le vmid existe déjà, le playbook
+# ne touche à rien. Voir la section Dépannage du README pour le cas d'une VM
+# à moitié provisionnée.
+#
+# Usage :
+#   ansible-playbook -i ansible/inventory.ini ansible/create-proxmox-vm.yml
+# =============================================================================
+
+- name: Créer la VM pokemon-find sur Proxmox
+  hosts: proxmox
+  become: true
+  gather_facts: false
+
+  vars:
+    # 9001 est pris par bardenoa, 10.10.10.50 par la VM k3s de lifeos.
+    vmid: 9002
+    vm_name: pokemon-find
+    memory_mb: 2048
+    cores: 2
+    bridge: vmbr0
+    storage: local-lvm
+    disk_size: 20G
+    image_url: "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-amd64.qcow2"
+    # Même fichier que les VM lifeos et bardenoa sur cet hôte (même image de
+    # base) — inutile de le télécharger une troisième fois.
+    image_dest: "/var/lib/vz/template/iso/debian-12-generic-amd64.qcow2"
+    vm_ip_cidr: "10.10.10.52/24"
+    vm_gateway: "10.10.10.1"
+    vm_nameserver: "1.1.1.1"
+    local_ssh_pubkey: "{{ lookup('env', 'HOME') }}/.ssh/id_rsa.pub"
+
+  tasks:
+    - name: Vérifier si la VM existe déjà
+      ansible.builtin.command: qm status {{ vmid }}
+      register: vm_status
+      changed_when: false
+      failed_when: false
+
+    - name: Télécharger l'image cloud Debian 12 sur l'hôte Proxmox
+      ansible.builtin.get_url:
+        url: "{{ image_url }}"
+        dest: "{{ image_dest }}"
+        mode: "0644"
+        timeout: 300
+      when: vm_status.rc != 0
+
+    - name: Créer la VM (coquille vide)
+      ansible.builtin.command: >
+        qm create {{ vmid }}
+        --name {{ vm_name }}
+        --memory {{ memory_mb }}
+        --cores {{ cores }}
+        --cpu host
+        --onboot 1
+        --net0 virtio,bridge={{ bridge }}
+      when: vm_status.rc != 0
+
+    - name: Importer le disque cloud dans le stockage Proxmox
+      ansible.builtin.command: qm importdisk {{ vmid }} {{ image_dest }} {{ storage }}
+      when: vm_status.rc != 0
+
+    - name: Attacher le disque, le cloud-init et la console série
+      ansible.builtin.command: "{{ item }}"
+      loop:
+        - "qm set {{ vmid }} --scsihw virtio-scsi-pci --scsi0 {{ storage }}:vm-{{ vmid }}-disk-0"
+        - "qm set {{ vmid }} --ide2 {{ storage }}:cloudinit"
+        - "qm set {{ vmid }} --boot c --bootdisk scsi0"
+        - "qm set {{ vmid }} --serial0 socket --vga serial0"
+        - "qm set {{ vmid }} --ipconfig0 ip={{ vm_ip_cidr }},gw={{ vm_gateway }}"
+        - "qm set {{ vmid }} --nameserver {{ vm_nameserver }}"
+      when: vm_status.rc != 0
+
+    - name: Redimensionner le disque
+      ansible.builtin.command: qm resize {{ vmid }} scsi0 {{ disk_size }}
+      when: vm_status.rc != 0
+
+    - name: Copier la clé SSH publique locale sur l'hôte Proxmox
+      ansible.builtin.copy:
+        src: "{{ local_ssh_pubkey }}"
+        dest: "/tmp/pokemon-find-vm-{{ vmid }}.pub"
+        mode: "0644"
+      when: vm_status.rc != 0
+
+    - name: Injecter la clé SSH via cloud-init
+      ansible.builtin.command: qm set {{ vmid }} --sshkeys /tmp/pokemon-find-vm-{{ vmid }}.pub
+      when: vm_status.rc != 0
+
+    - name: Démarrer la VM
+      ansible.builtin.command: qm start {{ vmid }}
+      when: vm_status.rc != 0
+
+    - name: VM déjà présente — rien à faire
+      ansible.builtin.debug:
+        msg: "vmid {{ vmid }} existe déjà (statut : {{ vm_status.stdout }}) — playbook sauté."
+      when: vm_status.rc == 0

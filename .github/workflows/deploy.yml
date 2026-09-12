@@ -1,0 +1,46 @@
+name: Deploy
+
+# `push` sur main uniquement. Ne jamais ajouter `pull_request` ici : ce
+# workflow tourne sur un runner auto-hébergé, sur un dépôt public — une pull
+# request depuis un fork exécuterait alors du code arbitraire sur la VM. Voir
+# l'avertissement en tête de ansible/setup-github-runner.yml.
+on:
+  push:
+    branches: [main]
+
+# Un déploiement à la fois : deux push rapprochés ne doivent pas lancer deux
+# `docker compose up --build` concurrents dans le même dossier.
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # L'étiquette précise du runner, et non le générique `self-hosted` : si
+    # un autre runner est ajouté un jour au compte, ce workflow ne doit pas
+    # atterrir dessus.
+    runs-on: [self-hosted, pokemon-find-vm]
+    timeout-minutes: 20
+
+    steps:
+      - name: Redéployer la stack
+        run: |
+          cd /opt/pokemon-find
+          sudo git pull --ff-only
+          sudo docker compose up -d --build
+
+      - name: Vérifier que l'application répond
+        # `docker compose up -d` rend la main au démarrage du conteneur, pas
+        # quand l'application est prête : sans cette vérification, un
+        # déploiement cassé s'afficherait en vert.
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/healthz | grep -q '"status":"ok"'; then
+              echo "Application prête."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "L'application n'a pas répondu sur /healthz après 150 s." >&2
+          sudo docker compose -f /opt/pokemon-find/docker-compose.yml logs --tail 50 >&2
+          exit 1

@@ -1,0 +1,104 @@
+# =============================================================================
+# setup-vm-nat.yml
+# Même hôte Proxmox WiFi-only que lifeos et bardenoa : `vmbr0` est un bridge
+# isolé (10.10.10.0/24) sans carte physique dedans, parce que le WiFi ne se
+# bridge pas comme de l'Ethernet. Sans ce playbook, la VM n'a ni accès à
+# Internet, ni visibilité depuis le LAN.
+#
+# Il fait sortir la VM vers Internet (MASQUERADE sur tout le sous-réseau,
+# déjà en place si bardenoa a été déployé avant — les règles sont
+# idempotentes) et ouvre un port SSH dédié pour elle. Aucune règle 80/443
+# ici : le trafic web passe par l'ingress k3s existant, qui route par nom
+# d'hôte (voir configure-ingress.yml).
+#
+# Usage :
+#   ansible-playbook -i ansible/inventory.ini ansible/setup-vm-nat.yml
+# =============================================================================
+
+- name: Configurer le NAT pour la VM pokemon-find sur bridge isolé
+  hosts: proxmox
+  become: true
+  gather_facts: false
+
+  vars:
+    # iptables accepte silencieusement une interface inexistante : le playbook
+    # réussirait sans qu'aucun trafic ne passe. Vérifie le nom réel avec
+    # `ip -br link` sur l'hôte Proxmox avant de lancer.
+    wan_iface: wlo1
+    vm_subnet: "10.10.10.0/24"
+    # 2222 est l'usage lifeos, 2223 celui de bardenoa.
+    port_forwards:
+      - { host_port: 2224, vm_ip: "10.10.10.52", vm_port: 22 } # SSH pokemon-find
+
+  tasks:
+    - name: Activer le forwarding IP immédiatement
+      ansible.builtin.command: sysctl -w net.ipv4.ip_forward=1
+      changed_when: true
+
+    - name: Rendre le forwarding IP persistant au reboot
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.d/99-pokemon-find-vm-nat.conf
+        line: "net.ipv4.ip_forward=1"
+        create: true
+        mode: "0644"
+
+    - name: Installer iptables-persistent (sauvegarde/restauration des règles au boot)
+      ansible.builtin.apt:
+        name: iptables-persistent
+        state: present
+        update_cache: true
+      environment:
+        DEBIAN_FRONTEND: noninteractive
+
+    - name: NAT sortant — le sous-réseau VM sort vers Internet via {{ wan_iface }}
+      ansible.builtin.shell: >
+        iptables -t nat -C POSTROUTING -s {{ vm_subnet }} -o {{ wan_iface }} -j MASQUERADE 2>/dev/null ||
+        iptables -t nat -A POSTROUTING -s {{ vm_subnet }} -o {{ wan_iface }} -j MASQUERADE
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Autoriser le forward depuis le sous-réseau VM
+      ansible.builtin.shell: >
+        iptables -C FORWARD -s {{ vm_subnet }} -j ACCEPT 2>/dev/null ||
+        iptables -A FORWARD -s {{ vm_subnet }} -j ACCEPT
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Autoriser le forward vers le sous-réseau VM
+      ansible.builtin.shell: >
+        iptables -C FORWARD -d {{ vm_subnet }} -j ACCEPT 2>/dev/null ||
+        iptables -A FORWARD -d {{ vm_subnet }} -j ACCEPT
+      args:
+        executable: /bin/bash
+      changed_when: true
+
+    - name: Rediriger les ports du LAN (IP WiFi de l'hôte) vers la VM pokemon-find
+      # La boucle `while` purge d'abord toute règle existante sur ce port avant
+      # d'en ajouter une : sans ça, rejouer le playbook empile les DNAT.
+      ansible.builtin.shell: |
+        while iptables -t nat -L PREROUTING -n --line-numbers | \
+              awk -v p="{{ item.host_port }}" '$0 ~ ("dpt:"p" ") {print $1; exit}' | \
+              grep -q .; do
+          line=$(iptables -t nat -L PREROUTING -n --line-numbers | \
+                 awk -v p="{{ item.host_port }}" '$0 ~ ("dpt:"p" ") {print $1; exit}')
+          iptables -t nat -D PREROUTING "$line"
+        done
+        iptables -t nat -A PREROUTING -i {{ wan_iface }} -p tcp --dport {{ item.host_port }} \
+          -j DNAT --to-destination {{ item.vm_ip }}:{{ item.vm_port }}
+      args:
+        executable: /bin/bash
+      loop: "{{ port_forwards }}"
+      changed_when: true
+
+    - name: Sauvegarder les règles iptables (persistant au reboot)
+      ansible.builtin.command: netfilter-persistent save
+      changed_when: true
+
+    - name: Résumé
+      ansible.builtin.debug:
+        msg: >-
+          NAT actif. Depuis ton Mac : ssh -p 2224 debian@{{ ansible_host }} pour la
+          VM pokemon-find (10.10.10.52). Le trafic web passe par l'ingress k3s
+          existant — lance configure-ingress.yml pour le brancher.

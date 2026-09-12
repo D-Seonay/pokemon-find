@@ -1,0 +1,91 @@
+# =============================================================================
+# deploy-pokemon-find.yml
+# Installe Docker sur la VM, clone le dépôt, et lance la stack docker-compose
+# (un unique conteneur Node qui sert le front construit et le WebSocket sur le
+# même port).
+#
+# Deux différences avec le playbook équivalent de bardenoa, toutes deux dues
+# au fait que ce dépôt est PUBLIC :
+#
+#   - Pas de deploy key. bardenoa devait en générer une sur la VM, l'afficher,
+#     échouer, attendre son enregistrement sur GitHub, puis être relancé. Ici
+#     un clone HTTPS anonyme suffit : le premier run aboutit directement.
+#   - Aucun secret à générer. Toutes les variables d'environnement de
+#     pokemon-find ont une valeur par défaut utilisable (voir le README
+#     racine), et docker-compose déclare `.env` en `required: false`. Pas de
+#     JWT_SECRET, donc rien qu'un redéploiement pourrait écraser par accident.
+#
+# Idempotent : rejouable après chaque `git push` pour redéployer (pull +
+# rebuild + up).
+#
+# Usage :
+#   ansible-playbook -i ansible/inventory.ini ansible/deploy-pokemon-find.yml
+# =============================================================================
+
+- name: Déployer pokemon-find sur sa VM
+  hosts: pokemon_find
+  become: true
+  gather_facts: false
+
+  vars:
+    github_repo: "D-Seonay/pokemon-find"
+    app_dir: /opt/pokemon-find
+    app_port: 3000
+
+  tasks:
+    - name: Installer git
+      ansible.builtin.apt:
+        name: git
+        state: present
+        update_cache: true
+
+    - name: Installer Docker (script officiel get.docker.com)
+      ansible.builtin.shell: curl -fsSL https://get.docker.com | sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Ajouter l'utilisateur {{ ansible_user }} au groupe docker
+      ansible.builtin.user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: true
+
+    - name: Cloner ou mettre à jour le dépôt
+      # HTTPS et non SSH : le dépôt est public, donc lisible sans
+      # authentification. C'est ce qui supprime toute la danse de la deploy
+      # key que bardenoa impose au premier déploiement.
+      ansible.builtin.git:
+        repo: "https://github.com/{{ github_repo }}.git"
+        dest: "{{ app_dir }}"
+        version: main
+        force: true
+
+    - name: Lancer la stack avec Docker Compose
+      # Le build se fait sur la VM (monorepo complet : pnpm install, tsc,
+      # Vite). Compter plusieurs minutes au premier run, l'essentiel étant
+      # ensuite servi par le cache de couches Docker.
+      ansible.builtin.command: docker compose up -d --build
+      args:
+        chdir: "{{ app_dir }}"
+      changed_when: true
+
+    - name: Attendre que l'application réponde sur /healthz
+      # `docker compose up -d` rend la main dès que le conteneur démarre, pas
+      # quand l'application est prête. Sans cette attente, le playbook se
+      # terminerait en succès sur une stack encore en train de démarrer — ou
+      # définitivement cassée, ce qui ne se verrait qu'à la première visite.
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ app_port }}/healthz"
+        return_content: true
+      register: health
+      until: health.status == 200 and (health.json.status | default('')) == 'ok'
+      retries: 30
+      delay: 5
+      changed_when: false
+
+    - name: Résumé
+      ansible.builtin.debug:
+        msg: >-
+          Stack démarrée et /healthz répond (uptime {{ health.json.uptimeMs }} ms,
+          {{ health.json.rooms }} room(s), {{ health.json.players }} joueur(s)).
+          Exposition web : lance configure-ingress.yml.
