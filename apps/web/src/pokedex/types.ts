@@ -78,5 +78,5 @@ export function gradientOfType(type: string): string {
  */
 export function auraOfType(type: string): string {
   const base = colorOfType(type);
-  return `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${base} 45%, transparent) 0%, color-mix(in srgb, ${base} 12%, transparent) 45%, transparent 72%)`;
+  return `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${base} 70%, transparent) 0%, color-mix(in srgb, ${base} 28%, transparent) 40%, transparent 70%)`;
 }

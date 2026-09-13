@@ -48,6 +48,11 @@ export function PokemonDetailView({
       </div>
 
       <div className="flex flex-col items-center gap-1 text-center">
+        {/* Le numéro au-dessus du nom : c'est l'identifiant que le jeu fait deviner,
+            il a sa place en évidence sur la fiche. */}
+        <p className="mono text-lg text-[var(--text-dim)]">
+          {formatPokedexNumber(pokemon.id, maxId)}
+        </p>
         <h2 className="text-3xl font-extrabold">{pokemon.nameFr}</h2>
         <p className="text-[var(--text-dim)]">{pokemon.nameEn}</p>
         {detail && (

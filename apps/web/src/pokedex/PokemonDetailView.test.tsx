@@ -27,6 +27,11 @@ function show(detail: PokemonDetail | undefined, id = 1, onSelect?: (next: Pokem
 }
 
 describe("PokemonDetailView", () => {
+  it("met le numéro en évidence, puisque c'est lui que le jeu fait deviner", () => {
+    show(bulbizarre);
+    expect(screen.getByText("#001")).toBeInTheDocument();
+  });
+
   it("écrit les types en toutes lettres sous le nom", () => {
     show(bulbizarre);
     expect(screen.getByText("Plante / Poison")).toBeInTheDocument();
