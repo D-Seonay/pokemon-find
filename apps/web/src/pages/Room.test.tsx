@@ -183,6 +183,70 @@ describe("Room — régression : composition des clics de générations sous deb
   });
 });
 
+describe("Room — réglages de durée et de nombre de manches par l'hôte", () => {
+  beforeEach(() => vi.useFakeTimers());
+
+  it("permet à l'hôte de changer le temps par manche", () => {
+    renderRoom();
+    settleJoin(makeState({ settings: { ...DEFAULT_SETTINGS, roundDurationMs: 15000 } }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "25 s" }));
+    act(() => vi.advanceTimersByTime(250));
+
+    expect(emittedOf("room:settings")[0]?.payload).toEqual({
+      settings: { ...DEFAULT_SETTINGS, roundDurationMs: 25000 },
+    });
+  });
+
+  it("permet à l'hôte de changer le nombre de manches", () => {
+    renderRoom();
+    settleJoin(makeState({ settings: { ...DEFAULT_SETTINGS, roundCount: 10 } }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "5 manches" }));
+    act(() => vi.advanceTimersByTime(250));
+
+    expect(emittedOf("room:settings")[0]?.payload).toEqual({
+      settings: { ...DEFAULT_SETTINGS, roundCount: 5 },
+    });
+  });
+
+  it("n'offre aucun réglage à un invité, qui les voit en lecture seule", () => {
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()] }), "guest-1");
+
+    expect(screen.queryByRole("radio", { name: "25 s" })).toBeNull();
+    expect(screen.getByText(/Générations : 1 ·/)).toBeInTheDocument();
+  });
+
+  // Le piège que la généralisation de l'état optimiste doit fermer : avant l'accusé de
+  // réception du serveur, `state.settings` porte encore l'ancienne valeur. Composer le
+  // second changement à partir de lui annulerait silencieusement le premier.
+  it("ne perd pas la durée quand les générations changent juste après", () => {
+    renderRoom();
+    settleJoin(makeState({ settings: { ...DEFAULT_SETTINGS, roundDurationMs: 15000 } }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "25 s" }));
+    act(() => vi.advanceTimersByTime(100)); // le débounce n'a pas encore écrit
+    fireEvent.click(screen.getByRole("checkbox", { name: /génération 2/i }));
+    act(() => vi.advanceTimersByTime(250));
+
+    const calls = emittedOf("room:settings");
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.payload).toEqual({
+      settings: { ...DEFAULT_SETTINGS, roundDurationMs: 25000, generations: [1, 2] },
+    });
+  });
+
+  it("affiche le réglage choisi sans attendre la confirmation du serveur", () => {
+    renderRoom();
+    settleJoin(makeState({ settings: { ...DEFAULT_SETTINGS, roundCount: 10 } }));
+
+    fireEvent.click(screen.getByRole("radio", { name: "15 manches" }));
+    // Aucun temps avancé : le serveur n'a rien confirmé, l'affichage doit déjà suivre.
+    expect(screen.getByRole("radio", { name: "15 manches" })).toBeChecked();
+  });
+});
+
 describe("Room — déroulement d'une manche", () => {
   it("affiche la manche en cours et envoie round:answer à la validation", async () => {
     const user = userEvent.setup();

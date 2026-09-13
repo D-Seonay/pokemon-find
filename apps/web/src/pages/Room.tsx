@@ -1,8 +1,9 @@
-import { buildPool, type GenerationId } from "@pkfind/shared";
+import { buildPool, type GameSettings } from "@pkfind/shared";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button.js";
 import { GenerationPicker } from "../components/GenerationPicker.js";
+import { RoundTimingPicker } from "../components/RoundTimingPicker.js";
 import { MultiReveal } from "../components/MultiReveal.js";
 import { PokemonCombobox } from "../components/PokemonCombobox.js";
 import { Scoreboard } from "../components/Scoreboard.js";
@@ -34,7 +35,11 @@ export function Room() {
   // de `setSettings` écoulé. Le choix en attente compose donc les clics ici, côté état
   // local, et sert de source de vérité pour l'affichage tant que l'écriture réseau n'a pas
   // été accusée ; on se réconcilie avec l'état serveur dès que cet accusé revient.
-  const [pendingGenerations, setPendingGenerations] = useState<GenerationId[] | null>(null);
+  // Tous les réglages, et pas seulement les générations : avant l'accusé de réception,
+  // `state.settings` porte encore l'ancienne valeur. Composer un second changement à partir
+  // de lui annulerait silencieusement le premier — changer la durée puis cocher une
+  // génération dans la foulée remettrait la durée à sa valeur d'avant.
+  const [pendingSettings, setPendingSettings] = useState<GameSettings | null>(null);
 
   // La règle "leave on unmount" (stopper les fantômes qui ne répondent jamais, ce qui
   // forcerait chaque manche à courir jusqu'à son terme) vit désormais dans `useRoom` lui-même :
@@ -128,6 +133,20 @@ export function Room() {
       return <p className="mono text-center text-6xl">Reconnexion…</p>;
     }
 
+    // Ce que l'hôte voit : sa dernière intention si elle n'est pas encore confirmée,
+    // sinon l'état du serveur. C'est aussi la base de composition du changement suivant.
+    const shownSettings = pendingSettings ?? state.settings;
+
+    const applySettings = (patch: Partial<GameSettings>): void => {
+      const next = { ...shownSettings, ...patch };
+      setPendingSettings(next);
+      room.actions.setSettings(next, () => {
+        // Ne retirer l'état optimiste que s'il correspond encore à ce qui a été envoyé :
+        // un accusé tardif ne doit pas effacer un réglage cliqué entre-temps.
+        setPendingSettings((current) => (current === next ? null : current));
+      });
+    };
+
     return (
       <section className="flex flex-col gap-6">
         <h1 className="text-3xl font-extrabold">Room</h1>
@@ -161,15 +180,18 @@ export function Room() {
           </p>
         )}
         {isHost ? (
-          <GenerationPicker
-            value={pendingGenerations ?? state.settings.generations}
-            onChange={(generations) => {
-              setPendingGenerations(generations);
-              room.actions.setSettings({ ...state.settings, generations }, () => {
-                setPendingGenerations(null);
-              });
-            }}
-          />
+          <>
+            <GenerationPicker
+              value={shownSettings.generations}
+              onChange={(generations) => applySettings({ generations })}
+            />
+            <RoundTimingPicker
+              durationMs={shownSettings.roundDurationMs}
+              roundCount={shownSettings.roundCount}
+              onDurationChange={(roundDurationMs) => applySettings({ roundDurationMs })}
+              onCountChange={(roundCount) => applySettings({ roundCount })}
+            />
+          </>
         ) : (
           <p className="text-[var(--text-dim)]">
             Générations : {state.settings.generations.join(", ")} ·{" "}
