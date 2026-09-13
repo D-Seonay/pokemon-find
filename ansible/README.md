@@ -29,6 +29,50 @@ routage (`configure-ingress.yml`).
 | VM pokemon-find | `10.10.10.52`, SSH `2224`, vmid `9002`  |
 | Domaine         | `pokemon.seonay.eu`                     |
 
+## Réserver l'adresse de l'hôte sur la Freebox
+
+C'est le point le plus fragile de toute la chaîne, et le seul qui se règle une fois pour
+toutes. L'hôte Proxmox porte son adresse en dur (`iface wlo1 inet static`), mais la
+Freebox n'en sait rien : si son serveur DHCP attribue un jour `192.168.1.253` à un autre
+appareil, deux machines se disputent l'adresse et **tout tombe** — l'accès depuis
+l'extérieur comme les playbooks.
+
+|                                  |                     |
+| -------------------------------- | ------------------- |
+| Adresse à réserver               | `192.168.1.253`     |
+| MAC de l'interface WiFi (`wlo1`) | `34:2e:b7:94:12:95` |
+| Freebox (passerelle)             | `192.168.1.254`     |
+
+### Marche à suivre
+
+1. Ouvrir [`http://mafreebox.freebox.fr`](http://mafreebox.freebox.fr) depuis le réseau
+   local et se connecter.
+2. **Paramètres de la Freebox** → **DHCP**. Selon la génération de boîtier et la version
+   de Freebox OS, la section s'appelle « Baux DHCP statiques » ou « Adresses réservées »,
+   et peut demander d'activer le **mode avancé**.
+3. Ajouter un bail statique : MAC `34:2e:b7:94:12:95` → IP `192.168.1.253`.
+   L'hôte apparaît souvent déjà dans la liste des appareils connectés, ce qui évite de
+   saisir la MAC à la main — vérifier alors qu'il s'agit bien de cette MAC, l'hôte n'ayant
+   que du WiFi.
+
+Variante, si l'interface ne propose pas de bail statique : **rétrécir la plage DHCP** pour
+qu'elle s'arrête avant `.253` (par exemple `192.168.1.10` – `192.168.1.200`). L'adresse
+sort alors de ce que la box peut distribuer, ce qui règle le conflit autrement.
+
+### Vérifier que c'est pris
+
+La réservation ne change rien tant que le bail en cours n'a pas expiré ; le plus simple
+est de vérifier que l'hôte répond toujours à son adresse, puis de recontrôler après un
+redémarrage de la Freebox ou de l'hôte :
+
+```bash
+ping -c 2 192.168.1.253
+ansible -i ansible/inventory.ini proxmox -m ansible.builtin.raw -a "ip -4 -br addr show wlo1"
+```
+
+Une adresse autre que `192.168.1.253` en sortie signifie que la réservation n'a pas été
+prise en compte — ou qu'elle vise la mauvaise MAC.
+
 ## Prérequis
 
 - Accès SSH root à l'hôte Proxmox (`192.168.1.253`)
@@ -173,8 +217,8 @@ conflit dans `~/.ssh/known_hosts` (`ssh-keygen -R 10.10.10.52`).
 bouge donc pas d'elle-même — contrairement à ce que cette section affirmait, par
 recopie du README de bardenoa sans vérification. Si elle devient malgré tout
 injoignable, les causes plausibles sont un conflit d'adresse (la Freebox aurait
-attribué `.253` à un autre appareil : à exclure de sa plage DHCP, ou à réserver
-pour la MAC `34:2e:b7:94:12:95`) ou l'hôte simplement éteint.
+attribué `.253` à un autre appareil — voir « Réserver l'adresse de l'hôte sur la
+Freebox » plus haut) ou l'hôte simplement éteint.
 
 **VM à moitié provisionnée** : `create-proxmox-vm.yml` est idempotent seulement
 sur l'existence du `vmid`. Si `qm importdisk` ou l'injection de la clé SSH
