@@ -8,11 +8,11 @@ import {
   tierOf,
 } from "@pkfind/shared";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { Button } from "../components/Button.js";
 import { PokemonCombobox } from "../components/PokemonCombobox.js";
 import { RoundResult } from "../components/RoundResult.js";
 import { TargetNumber } from "../components/TargetNumber.js";
+import { BackLink } from "../components/BackLink.js";
 import { Timer } from "../components/Timer.js";
 import { useSoloGame } from "../game/useSoloGame.js";
 import { type DailyEntry, currentStreak, readHistory, recordDaily } from "../storage/daily.js";
@@ -107,6 +107,7 @@ function DailyResult({ entry, today }: { entry: DailyEntry; today: string }) {
 
   return (
     <section className="flex flex-col gap-4 text-center">
+      <BackLink />
       <h1 className="text-2xl font-extrabold">Défi du jour — {entry.date}</h1>
       <p className="mono text-5xl" style={{ color: "var(--accent)" }}>
         {entry.total.toLocaleString("fr-FR")} / {max.toLocaleString("fr-FR")}
@@ -133,9 +134,6 @@ function DailyResult({ entry, today }: { entry: DailyEntry; today: string }) {
       )}
       <Button onClick={copy}>{copied ? "Copié" : "Partager le résultat"}</Button>
       <p className="text-sm text-[var(--text-dim)]">Reviens demain pour un nouveau défi.</p>
-      <Link to="/" className="underline">
-        Retour à l'accueil
-      </Link>
     </section>
   );
 }

@@ -26,8 +26,11 @@ describe("Pokedex", () => {
     expect(within(rowFor("Pikachu")).getByText("#0025")).toBeInTheDocument();
   });
 
-  it("affiche le nom anglais quand il diffère du français", () => {
-    renderPokedex();
+  it("affiche le nom anglais quand il diffère du français", async () => {
+    const user = renderPokedex();
+    // Canarticho (#83) n'est plus sur la première page depuis la pagination : on le
+    // cherche, ce que ferait de toute façon quelqu'un voulant une entrée précise.
+    await user.type(screen.getByRole("searchbox"), "canarticho");
     // Canarticho s'appelle Farfetch'd en anglais — c'est l'intérêt de la liste.
     expect(within(rowFor("Canarticho")).getByText("Farfetch’d")).toBeInTheDocument();
   });
@@ -52,9 +55,13 @@ describe("Pokedex", () => {
 
   it("restreint la liste à la génération choisie", async () => {
     const user = renderPokedex();
+    // Par la recherche, pour que le test porte sur le filtre de génération et non sur
+    // la page où tombe le Pokémon : Lucario (#448) est en gén. 4.
+    await user.type(screen.getByRole("searchbox"), "lucario");
     expect(screen.getByText("Lucario")).toBeInTheDocument();
+
     await user.click(screen.getByRole("button", { name: /gén 1 seulement/i }));
-    expect(screen.getByText("Mewtwo")).toBeInTheDocument();
+
     expect(screen.queryByText("Lucario")).toBeNull();
   });
 

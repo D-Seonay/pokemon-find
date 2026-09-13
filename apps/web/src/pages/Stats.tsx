@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { BackLink } from "../components/BackLink.js";
 import {
   MIN_GENERATION_SAMPLE,
   computeStats,
@@ -23,6 +24,7 @@ export function Stats() {
   if (history.length === 0) {
     return (
       <section className="flex flex-col gap-4">
+        <BackLink />
         <h1 className="text-3xl font-extrabold">Statistiques</h1>
         <p className="text-[var(--text-dim)]">
           Aucune partie solo terminée pour l'instant. Vos écarts et vos réponses exactes
@@ -37,6 +39,7 @@ export function Stats() {
 
   return (
     <section className="flex flex-col gap-6">
+      <BackLink />
       <h1 className="text-3xl font-extrabold">Statistiques</h1>
 
       <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -102,10 +105,6 @@ export function Stats() {
         Une génération n'est désignée comme la plus faible qu'à partir de {MIN_GENERATION_SAMPLE}{" "}
         manches jouées : en dessous, l'écart ne prouve rien.
       </p>
-
-      <Link to="/" className="underline">
-        Retour à l'accueil
-      </Link>
     </section>
   );
 }

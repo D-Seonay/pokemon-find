@@ -9,6 +9,8 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { type DetailMap, loadDetails } from "../pokedex/details.js";
 import { PokedexCard } from "../pokedex/PokedexCard.js";
+import { Pagination } from "../pokedex/Pagination.js";
+import { pageSlice } from "../pokedex/paginate.js";
 import { PokemonDialog } from "../pokedex/PokemonDialog.js";
 import { GenerationPicker } from "./GenerationPicker.js";
 
@@ -29,6 +31,7 @@ export function PokedexBrowser({
   const [query, setQuery] = useState("");
   const [details, setDetails] = useState<DetailMap>({});
   const [open, setOpen] = useState<Pokemon | null>(null);
+  const [page, setPage] = useState(0);
 
   // Chargées à l'ouverture du Pokédex, pas au démarrage du jeu : 70 Ko compressés que
   // seuls paient ceux qui consultent la liste (voir pokedex/details.ts). Un échec n'est
@@ -56,6 +59,18 @@ export function PokedexBrowser({
     [pool, query],
   );
 
+  // Retour en première page dès que la liste change de contenu. Sans ça, filtrer depuis
+  // la page 3 laisserait sur une page qui n'existe plus pour le nouveau filtre : l'écran
+  // paraîtrait vide alors qu'il y a des résultats.
+  const signature = `${query}|${generations.join(",")}`;
+  const [lastSignature, setLastSignature] = useState(signature);
+  if (signature !== lastSignature) {
+    setLastSignature(signature);
+    setPage(0);
+  }
+
+  const shown = pageSlice(entries, page);
+
   return (
     <div className="flex flex-col gap-4">
       <input
@@ -76,18 +91,27 @@ export function PokedexBrowser({
           Aucun Pokémon ne correspond à cette recherche.
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {entries.map((pokemon) => (
-            <li key={pokemon.id} className="contents">
-              <PokedexCard
-                pokemon={pokemon}
-                detail={details[String(pokemon.id)]}
-                maxId={pool.maxId}
-                onOpen={() => setOpen(pokemon)}
-              />
-            </li>
-          ))}
-        </ul>
+        <>
+          <Pagination page={page} total={entries.length} onChange={setPage} />
+          <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {shown.map((pokemon) => (
+              <li key={pokemon.id} className="contents">
+                <PokedexCard
+                  pokemon={pokemon}
+                  detail={details[String(pokemon.id)]}
+                  maxId={pool.maxId}
+                  onOpen={() => setOpen(pokemon)}
+                />
+              </li>
+            ))}
+          </ul>
+          <Pagination
+            page={page}
+            total={entries.length}
+            onChange={setPage}
+            label="Pagination, en bas de la liste"
+          />
+        </>
       )}
 
       {open && (
