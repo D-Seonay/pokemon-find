@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button.js";
 import { GenerationPicker } from "../components/GenerationPicker.js";
+import { PokedexBrowser } from "../components/PokedexBrowser.js";
 import { RoundTimingPicker } from "../components/RoundTimingPicker.js";
 import { MultiReveal } from "../components/MultiReveal.js";
 import { PokemonCombobox } from "../components/PokemonCombobox.js";
@@ -40,6 +41,7 @@ export function Room() {
   // de lui annulerait silencieusement le premier — changer la durée puis cocher une
   // génération dans la foulée remettrait la durée à sa valeur d'avant.
   const [pendingSettings, setPendingSettings] = useState<GameSettings | null>(null);
+  const [pokedexOpen, setPokedexOpen] = useState(false);
 
   // La règle "leave on unmount" (stopper les fantômes qui ne répondent jamais, ce qui
   // forcerait chaque manche à courir jusqu'à son terme) vit désormais dans `useRoom` lui-même :
@@ -198,6 +200,15 @@ export function Room() {
             {state.settings.roundDurationMs / 1000} s · {state.settings.roundCount} manches
           </p>
         )}
+        {/* Le Pokédex n'est proposé QUE dans le lobby : la liste associe chaque numéro à
+            son nom, donc l'avoir sous la main pendant une manche reviendrait à afficher la
+            réponse à côté de la question. Replié par défaut pour ne pas noyer le lobby, et
+            rendu sur place plutôt que via un lien vers /pokedex, qui ferait quitter la room. */}
+        <Button variant="ghost" onClick={() => setPokedexOpen((open) => !open)}>
+          {pokedexOpen ? "Masquer le Pokédex" : "Consulter le Pokédex"}
+        </Button>
+        {pokedexOpen && <PokedexBrowser initialGenerations={shownSettings.generations} />}
+
         {isHost && (
           <>
             <Button

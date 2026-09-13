@@ -247,6 +247,67 @@ describe("Room — réglages de durée et de nombre de manches par l'hôte", () 
   });
 });
 
+describe("Room — Pokédex consultable depuis le lobby", () => {
+  it("laisse le Pokédex replié par défaut, pour ne pas noyer le lobby", () => {
+    renderRoom();
+    settleJoin(makeState());
+
+    expect(screen.getByRole("button", { name: /Pokédex/ })).toBeInTheDocument();
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("déplie la liste sans quitter la room", () => {
+    renderRoom();
+    settleJoin(makeState());
+
+    fireEvent.click(screen.getByRole("button", { name: /Pokédex/ }));
+
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+    expect(screen.getByText("Bulbizarre")).toBeInTheDocument();
+    // Le point qui compte : consulter ne doit pas envoyer room:leave ni couper le socket.
+    expect(emittedOf("room:leave")).toHaveLength(0);
+  });
+
+  it("s'ouvre sur les générations de la partie à venir", () => {
+    renderRoom();
+    settleJoin(makeState({ settings: { ...DEFAULT_SETTINGS, generations: [2] } }));
+
+    fireEvent.click(screen.getByRole("button", { name: /Pokédex/ }));
+
+    // Génération 2 : Héricendre en fait partie, Bulbizarre non.
+    expect(screen.getByText("Héricendre")).toBeInTheDocument();
+    expect(screen.queryByText("Bulbizarre")).toBeNull();
+  });
+
+  it("est proposé aussi à un invité, qui ne règle rien mais peut réviser", () => {
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()] }), "guest-1");
+    expect(screen.getByRole("button", { name: /Pokédex/ })).toBeInTheDocument();
+  });
+
+  // Anti-triche : la liste donne le nom correspondant à chaque numéro. L'avoir sous la
+  // main pendant une manche reviendrait à afficher la réponse à côté de la question.
+  it("disparaît dès que la partie démarre", () => {
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()] }));
+    fireEvent.click(screen.getByRole("button", { name: /Pokédex/ }));
+    expect(screen.getByRole("searchbox")).toBeInTheDocument();
+
+    act(() => {
+      triggerSocketEvent("round:start", {
+        roundIndex: 0,
+        roundCount: 10,
+        targetId: 25,
+        endsAt: Date.now() + 15000,
+        serverNow: Date.now(),
+      });
+    });
+
+    expect(screen.queryByRole("searchbox")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Pokédex/ })).toBeNull();
+  });
+});
+
 describe("Room — déroulement d'une manche", () => {
   it("affiche la manche en cours et envoie round:answer à la validation", async () => {
     const user = userEvent.setup();
