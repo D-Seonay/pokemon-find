@@ -23,7 +23,12 @@
     # 9001 est pris par bardenoa, 10.10.10.50 par la VM k3s de lifeos.
     vmid: 9002
     vm_name: pokemon-find
-    memory_mb: 2048
+    # 4 Go et non 2 : bardenoa, voisine sur cet hôte, tourne avec 4 Go alors que
+    # son playbook en déclare 2 — elle a manifestement été augmentée après coup.
+    # Le build ici est du même ordre (pnpm install + tsc + Vite sur un monorepo)
+    # et l'hôte a 13 Go libres, donc autant ne pas se faire tuer par l'OOM au
+    # premier `docker compose up --build`.
+    memory_mb: 4096
     cores: 2
     bridge: vmbr0
     storage: local-lvm
