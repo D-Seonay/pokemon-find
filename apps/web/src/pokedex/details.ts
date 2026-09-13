@@ -13,6 +13,11 @@ export type PokemonDetail = {
   genus: string;
   flavor: string;
   stats: { hp: number; atk: number; def: number; spa: number; spd: number; spe: number };
+  /**
+   * La famille d'évolution, par étages. Ramifiée quand un étage compte plusieurs entrées
+   * — Évoli en a huit. Vide si l'espèce n'évolue pas.
+   */
+  evolution: number[][];
 };
 
 export type DetailMap = Readonly<Record<string, PokemonDetail>>;
@@ -34,7 +39,11 @@ function isDetail(value: unknown): value is PokemonDetail {
     typeof c.genus === "string" &&
     typeof c.flavor === "string" &&
     typeof c.stats === "object" &&
-    c.stats !== null
+    c.stats !== null &&
+    Array.isArray(c.evolution) &&
+    c.evolution.every(
+      (stage) => Array.isArray(stage) && stage.every((id) => typeof id === "number"),
+    )
   );
 }
 

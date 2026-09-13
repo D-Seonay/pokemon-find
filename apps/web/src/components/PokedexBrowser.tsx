@@ -96,6 +96,9 @@ export function PokedexBrowser({
           detail={details[String(open.id)]}
           maxId={pool.maxId}
           onClose={() => setOpen(null)}
+          // Sauter à une évolution remplace la fiche au lieu d'en empiler une seconde :
+          // on parcourt une famille sans jamais perdre le chemin du retour.
+          onSelect={setOpen}
         />
       )}
     </div>

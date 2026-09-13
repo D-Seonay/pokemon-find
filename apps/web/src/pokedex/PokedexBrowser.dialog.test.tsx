@@ -11,6 +11,7 @@ const BULBIZARRE = {
   genus: "Pokémon Graine",
   flavor: "Il passe son temps à faire la sieste au soleil.",
   stats: { hp: 45, atk: 49, def: 49, spa: 65, spd: 65, spe: 45 },
+  evolution: [[1], [2], [3]],
 };
 
 function stubFetch(impl: () => Promise<unknown>): void {
@@ -48,7 +49,12 @@ describe("Pokédex — fiche détaillée", () => {
     await user.click(card);
 
     const dialog = screen.getByRole("dialog");
-    expect(within(dialog).getByRole("heading", { name: "Bulbizarre" })).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("heading", { name: "Bulbizarre", level: 2 }),
+    ).toBeInTheDocument();
+    // Les types sont écrits en toutes lettres sur la fiche, comme sur la maquette de
+    // référence ; les pastilles colorées restent l'affaire des cartes de la grille.
+    expect(within(dialog).getByText("Plante / Poison")).toBeInTheDocument();
     expect(within(dialog).getByText("Pokémon Graine")).toBeInTheDocument();
     expect(within(dialog).getByText(/sieste au soleil/)).toBeInTheDocument();
     expect(within(dialog).getByText("0,7 m")).toBeInTheDocument();

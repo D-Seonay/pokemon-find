@@ -53,3 +53,30 @@ export function labelOfType(type: string): string {
 export function colorOfType(type: string): string {
   return TYPE_COLORS[type] ?? "#6b7280";
 }
+
+/**
+ * Le type qui donne sa couleur à la fiche. Le premier, par convention des jeux : c'est
+ * celui qui nomme le Pokémon (« le Spectre/Poison »), et c'est ce que fait l'écran de
+ * référence dont s'inspire cette fiche.
+ */
+export function primaryType(types: readonly string[]): string {
+  return types[0] ?? "normal";
+}
+
+/**
+ * Le dégradé des barres de statistiques : la couleur du type, éclaircie vers la droite.
+ * `color-mix` évite d'entretenir une seconde table de teintes claires à la main.
+ */
+export function gradientOfType(type: string): string {
+  const base = colorOfType(type);
+  return `linear-gradient(90deg, ${base}, color-mix(in srgb, ${base} 55%, white))`;
+}
+
+/**
+ * L'aura derrière le sprite. Un halo radial sombre teinté du type, qui s'éteint avant
+ * les bords pour se fondre dans le fond de la page plutôt que d'y dessiner un disque.
+ */
+export function auraOfType(type: string): string {
+  const base = colorOfType(type);
+  return `radial-gradient(circle at 50% 45%, color-mix(in srgb, ${base} 45%, transparent) 0%, color-mix(in srgb, ${base} 12%, transparent) 45%, transparent 72%)`;
+}
