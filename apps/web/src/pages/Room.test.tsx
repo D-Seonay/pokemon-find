@@ -322,6 +322,67 @@ describe("Room — régression : rejouer après une partie terminée", () => {
   });
 });
 
+describe("Room — QR code de la room", () => {
+  it("le garde replié par défaut, le lobby portant déjà beaucoup de commandes", () => {
+    renderRoom();
+    settleJoin(makeState());
+    expect(screen.getByRole("button", { name: "Afficher le QR code" })).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: /QR code/ })).toBeNull();
+  });
+
+  it("encode l'adresse complète de la room, celle qu'un invité doit ouvrir", () => {
+    renderRoom();
+    settleJoin(makeState());
+
+    fireEvent.click(screen.getByRole("button", { name: "Afficher le QR code" }));
+
+    expect(
+      screen.getByRole("img", { name: `QR code vers ${window.location.origin}/room/ABCD` }),
+    ).toBeInTheDocument();
+  });
+
+  it("se replie", () => {
+    renderRoom();
+    settleJoin(makeState());
+    fireEvent.click(screen.getByRole("button", { name: "Afficher le QR code" }));
+    fireEvent.click(screen.getByRole("button", { name: "Masquer le QR code" }));
+    expect(screen.queryByRole("img", { name: /QR code/ })).toBeNull();
+  });
+
+  it("reste proposé à un invité, qui peut faire entrer quelqu'un d'autre", () => {
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()] }), "guest-1");
+    expect(screen.getByRole("button", { name: "Afficher le QR code" })).toBeInTheDocument();
+  });
+
+  // Le QR ne sert à rien sur le téléphone qui l'affiche, ni à qui ne le voit pas :
+  // le lien copiable reste la voie universelle.
+  it("ne remplace pas le lien copiable", () => {
+    renderRoom();
+    settleJoin(makeState());
+    expect(screen.getByRole("button", { name: "Copier le lien" })).toBeInTheDocument();
+  });
+
+  it("disparaît une fois la partie lancée, le lobby n'étant plus affiché", () => {
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()] }));
+    fireEvent.click(screen.getByRole("button", { name: "Afficher le QR code" }));
+    expect(screen.getByRole("img", { name: /QR code/ })).toBeInTheDocument();
+
+    act(() => {
+      triggerSocketEvent("round:start", {
+        roundIndex: 0,
+        roundCount: 10,
+        targetId: 25,
+        endsAt: Date.now() + 15000,
+        serverNow: Date.now(),
+      });
+    });
+
+    expect(screen.queryByRole("img", { name: /QR code/ })).toBeNull();
+  });
+});
+
 describe("Room — Pokédex consultable depuis le lobby", () => {
   it("laisse le Pokédex replié par défaut, pour ne pas noyer le lobby", () => {
     renderRoom();

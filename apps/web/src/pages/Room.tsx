@@ -5,6 +5,7 @@ import { Button } from "../components/Button.js";
 import { GenerationPicker } from "../components/GenerationPicker.js";
 import { PokedexBrowser } from "../components/PokedexBrowser.js";
 import { PokemonSprite } from "../components/PokemonSprite.js";
+import { QrCode } from "../components/QrCode.js";
 import { RoundTimingPicker } from "../components/RoundTimingPicker.js";
 import { MultiReveal } from "../components/MultiReveal.js";
 import { PokemonCombobox } from "../components/PokemonCombobox.js";
@@ -43,6 +44,7 @@ export function Room() {
   // génération dans la foulée remettrait la durée à sa valeur d'avant.
   const [pendingSettings, setPendingSettings] = useState<GameSettings | null>(null);
   const [pokedexOpen, setPokedexOpen] = useState(false);
+  const [qrOpen, setQrOpen] = useState(false);
 
   // La règle "leave on unmount" (stopper les fantômes qui ne répondent jamais, ce qui
   // forcerait chaque manche à courir jusqu'à son terme) vit désormais dans `useRoom` lui-même :
@@ -167,6 +169,7 @@ export function Room() {
     // Ce que l'hôte voit : sa dernière intention si elle n'est pas encore confirmée,
     // sinon l'état du serveur. C'est aussi la base de composition du changement suivant.
     const shownSettings = pendingSettings ?? state.settings;
+    const roomUrl = `${window.location.origin}/room/${state.code}`;
 
     const applySettings = (patch: Partial<GameSettings>): void => {
       const next = { ...shownSettings, ...patch };
@@ -187,14 +190,27 @@ export function Room() {
         >
           {state.code}
         </p>
-        <Button
-          variant="ghost"
-          onClick={() =>
-            void navigator.clipboard.writeText(`${window.location.origin}/room/${state.code}`)
-          }
-        >
-          Copier le lien
-        </Button>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button
+            variant="ghost"
+            onClick={() => void navigator.clipboard.writeText(roomUrl)}
+            className="flex-1"
+          >
+            Copier le lien
+          </Button>
+          <Button variant="ghost" onClick={() => setQrOpen((open) => !open)} className="flex-1">
+            {qrOpen ? "Masquer le QR code" : "Afficher le QR code"}
+          </Button>
+        </div>
+        {/* Replié par défaut : le lobby porte déjà beaucoup de commandes. Le QR sert
+            surtout quand les joueurs sont ensemble dans la même pièce, un cas fréquent
+            ici mais pas universel — un clic pour l'obtenir suffit. */}
+        {qrOpen && (
+          <div className="flex flex-col items-center gap-2">
+            <QrCode value={roomUrl} />
+            <p className="text-sm text-[var(--text-dim)]">À scanner pour rejoindre cette room.</p>
+          </div>
+        )}
         <ul className="flex flex-col gap-2">
           {state.players.map((player) => (
             <li key={player.id} className="flex items-center gap-2">
