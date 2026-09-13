@@ -8,6 +8,7 @@ import { PokemonSprite } from "../components/PokemonSprite.js";
 import { QrCode } from "../components/QrCode.js";
 import { BlitzRoom } from "../blitz/BlitzRoom.js";
 import { GameModePicker } from "../blitz/GameModePicker.js";
+import { formatBlitzDuration } from "./BlitzSetup.js";
 import { RoundTimingPicker } from "../components/RoundTimingPicker.js";
 import { MultiReveal } from "../components/MultiReveal.js";
 import { PokemonCombobox } from "../components/PokemonCombobox.js";
@@ -254,17 +255,29 @@ export function Room() {
               value={shownSettings.generations}
               onChange={(generations) => applySettings({ generations })}
             />
-            <RoundTimingPicker
-              durationMs={shownSettings.roundDurationMs}
-              roundCount={shownSettings.roundCount}
-              onDurationChange={(roundDurationMs) => applySettings({ roundDurationMs })}
-              onCountChange={(roundCount) => applySettings({ roundCount })}
-            />
+            {/* Réglages propres au mode classique : en blitz, la durée se règle dans le
+                sélecteur de jeu et il n'y a pas de manches. Les laisser visibles donnait
+                à l'hôte deux champs sans effet. */}
+            {state.gameMode === "classic" && (
+              <RoundTimingPicker
+                durationMs={shownSettings.roundDurationMs}
+                roundCount={shownSettings.roundCount}
+                onDurationChange={(roundDurationMs) => applySettings({ roundDurationMs })}
+                onCountChange={(roundCount) => applySettings({ roundCount })}
+              />
+            )}
           </>
         ) : (
+          // Ce que l'invité doit savoir avant que ça démarre : à quel jeu il joue, sur
+          // quelles générations, et pendant combien de temps. Afficher les réglages du
+          // mode non choisi l'induirait en erreur — il lisait « 15 s · 10 manches » alors
+          // que la room était en contre-la-montre.
           <p className="text-[var(--text-dim)]">
-            Générations : {state.settings.generations.join(", ")} ·{" "}
-            {state.settings.roundDurationMs / 1000} s · {state.settings.roundCount} manches
+            {state.gameMode === "blitz" ? "Contre la montre" : "Trouver le numéro"} · Générations :{" "}
+            {state.settings.generations.join(", ")} ·{" "}
+            {state.gameMode === "blitz"
+              ? formatBlitzDuration(state.blitzSettings.durationMs)
+              : `${state.settings.roundDurationMs / 1000} s · ${state.settings.roundCount} manches`}
           </p>
         )}
         {/* Le Pokédex n'est proposé QUE dans le lobby : la liste associe chaque numéro à

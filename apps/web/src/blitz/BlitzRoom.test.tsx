@@ -95,6 +95,46 @@ describe("Room — blitz : réglage du mode", () => {
   });
 });
 
+describe("Room — blitz : ce que le lobby annonce", () => {
+  // Trouvés en jouant une vraie partie à deux : l'invité lisait « Générations : 1 · 15 s ·
+  // 10 manches » alors que la room était en contre-la-montre à 3 minutes. Il ignorait à
+  // quoi il allait jouer.
+  it("annonce le jeu et la durée à l'invité, pas les réglages de l'autre mode", () => {
+    renderRoom();
+    settleJoin(blitzState(), "guest-1");
+
+    const resume = screen.getByText(/Générations/);
+    expect(resume).toHaveTextContent("Contre la montre");
+    expect(resume).toHaveTextContent("3 min");
+    // Les réglages du mode classique n'ont aucun effet ici : les afficher trompe.
+    expect(resume).not.toHaveTextContent("manches");
+  });
+
+  it("annonce le mode classique et ses réglages quand c'est lui qui est choisi", () => {
+    renderRoom();
+    settleJoin(blitzState({ gameMode: "classic" }), "guest-1");
+
+    const resume = screen.getByText(/Générations/);
+    expect(resume).toHaveTextContent("Trouver le numéro");
+    expect(resume).toHaveTextContent("10 manches");
+  });
+
+  // Côté hôte : les réglages de manches restaient réglables alors qu'ils ne servaient à rien.
+  it("masque les réglages de manches à l'hôte quand le blitz est choisi", () => {
+    renderRoom();
+    settleJoin(blitzState());
+    expect(screen.queryByRole("radio", { name: "25 s" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "10 manches" })).toBeNull();
+  });
+
+  it("les rend à l'hôte dès qu'il revient au mode classique", () => {
+    renderRoom();
+    settleJoin(blitzState({ gameMode: "classic" }));
+    expect(screen.getByRole("radio", { name: "25 s" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "10 manches" })).toBeInTheDocument();
+  });
+});
+
 describe("Room — blitz : partie en cours", () => {
   it("affiche la grille, le chrono et le classement", () => {
     renderRoom();
