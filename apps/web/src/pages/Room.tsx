@@ -1,9 +1,10 @@
-import { buildPool, type GameSettings, isUnlimitedRound } from "@pkfind/shared";
+import { buildPool, type GameSettings, isUnlimitedRound, tryPokemonById } from "@pkfind/shared";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button.js";
 import { GenerationPicker } from "../components/GenerationPicker.js";
 import { PokedexBrowser } from "../components/PokedexBrowser.js";
+import { PokemonSprite } from "../components/PokemonSprite.js";
 import { RoundTimingPicker } from "../components/RoundTimingPicker.js";
 import { MultiReveal } from "../components/MultiReveal.js";
 import { PokemonCombobox } from "../components/PokemonCombobox.js";
@@ -91,6 +92,13 @@ export function Room() {
     }
 
     if (room.round) {
+      const answered =
+        room.round.answeredPokemonId === null
+          ? null
+          : (tryPokemonById(room.round.answeredPokemonId) ?? null);
+      const hasAnswered =
+        state.players.find((player) => player.id === room.playerId)?.hasAnswered ?? false;
+
       return (
         <section className="flex flex-col gap-4">
           <header className="flex items-center justify-between">
@@ -119,7 +127,26 @@ export function Room() {
             totalMs={state.settings.roundDurationMs}
           />
           <TargetNumber id={room.round.targetId} maxId={pool.maxId} />
-          <PokemonCombobox pool={pool} onSubmit={(pokemon) => room.actions.answer(pokemon.id)} />
+          {answered !== null ? (
+            // Répondu : on rappelle le choix et on retire le champ. Le garder actif
+            // invitait à resaisir pour ne récolter qu'un « Tu as déjà répondu ».
+            <div className="flex flex-col items-center gap-2">
+              <p>
+                Votre réponse : <strong>{answered.nameFr}</strong>
+              </p>
+              <PokemonSprite pokemon={answered} size={96} />
+              <p className="text-sm text-[var(--text-dim)]">En attente des autres joueurs…</p>
+            </div>
+          ) : hasAnswered ? (
+            // Le serveur nous sait ayant répondu mais on ignore quoi : c'est le cas d'une
+            // reconnexion en pleine manche, `answeredPokemonId` ne survivant pas au
+            // rechargement. Mieux vaut le dire que de rouvrir un champ qui sera refusé.
+            <p className="text-center text-[var(--text-dim)]">
+              Vous avez déjà répondu pour cette manche.
+            </p>
+          ) : (
+            <PokemonCombobox pool={pool} onSubmit={(pokemon) => room.actions.answer(pokemon.id)} />
+          )}
         </section>
       );
     }

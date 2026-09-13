@@ -334,6 +334,121 @@ describe("Room — déroulement d'une manche", () => {
     expect(answer?.payload).toEqual({ roundIndex: 2, pokemonId: 25 });
   });
 
+  it("rappelle le Pokémon répondu et retire le champ, au lieu de laisser resaisir", async () => {
+    const user = userEvent.setup();
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()], status: "round" }));
+    act(() => {
+      triggerSocketEvent("round:start", {
+        roundIndex: 0,
+        roundCount: 10,
+        targetId: 143,
+        endsAt: Date.now() + 15000,
+        serverNow: Date.now(),
+      });
+    });
+
+    await user.type(screen.getByRole("combobox"), "pika");
+    await user.keyboard("{Enter}{Enter}");
+    // Le serveur accuse réception : c'est lui qui fait foi sur « la réponse est prise ».
+    act(() => {
+      emittedOf("round:answer")[0]?.ack?.({ ok: true, data: null });
+    });
+
+    expect(screen.getByText(/Votre réponse/)).toHaveTextContent("Pikachu");
+    // Le champ disparaît : le garder actif invitait à resaisir pour récolter une erreur.
+    expect(screen.queryByRole("combobox")).toBeNull();
+    // Le numéro cible reste visible, on attend toujours les autres.
+    expect(screen.getByLabelText("Numéro cible 143")).toBeInTheDocument();
+  });
+
+  it("laisse resaisir si le serveur a refusé la réponse", async () => {
+    const user = userEvent.setup();
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()], status: "round" }));
+    act(() => {
+      triggerSocketEvent("round:start", {
+        roundIndex: 0,
+        roundCount: 10,
+        targetId: 143,
+        endsAt: Date.now() + 15000,
+        serverNow: Date.now(),
+      });
+    });
+
+    await user.type(screen.getByRole("combobox"), "pika");
+    await user.keyboard("{Enter}{Enter}");
+    act(() => {
+      emittedOf("round:answer")[0]?.ack?.({
+        ok: false,
+        code: "NOT_IN_POOL",
+        message: "Hors pool.",
+      });
+    });
+
+    // Rien n'a été enregistré côté serveur : le joueur doit pouvoir réessayer.
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(screen.queryByText(/Votre réponse/)).toBeNull();
+  });
+
+  it("oublie la réponse précédente à la manche suivante", async () => {
+    const user = userEvent.setup();
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()], status: "round" }));
+    act(() => {
+      triggerSocketEvent("round:start", {
+        roundIndex: 0,
+        roundCount: 10,
+        targetId: 143,
+        endsAt: Date.now() + 15000,
+        serverNow: Date.now(),
+      });
+    });
+    await user.type(screen.getByRole("combobox"), "pika");
+    await user.keyboard("{Enter}{Enter}");
+    act(() => {
+      emittedOf("round:answer")[0]?.ack?.({ ok: true, data: null });
+    });
+    expect(screen.getByText(/Votre réponse/)).toBeInTheDocument();
+
+    act(() => {
+      triggerSocketEvent("round:start", {
+        roundIndex: 1,
+        roundCount: 10,
+        targetId: 25,
+        endsAt: Date.now() + 15000,
+        serverNow: Date.now(),
+      });
+    });
+
+    expect(screen.queryByText(/Votre réponse/)).toBeNull();
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+  });
+
+  it("dit qu'on a déjà répondu après une reconnexion, sans rouvrir le champ", () => {
+    renderRoom();
+    // Le serveur nous sait ayant répondu ; le nom du Pokémon, lui, ne survit pas au
+    // rechargement — il n'a jamais transité par le réseau.
+    settleJoin(
+      makeState({
+        players: [host({ hasAnswered: true }), guest()],
+        status: "round",
+      }),
+    );
+    act(() => {
+      triggerSocketEvent("round:start", {
+        roundIndex: 0,
+        roundCount: 10,
+        targetId: 143,
+        endsAt: Date.now() + 15000,
+        serverNow: Date.now(),
+      });
+    });
+
+    expect(screen.getByText(/déjà répondu/)).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).toBeNull();
+  });
+
   it("affiche la révélation puis le classement final", () => {
     renderRoom();
     settleJoin(makeState({ players: [host(), guest()] }));

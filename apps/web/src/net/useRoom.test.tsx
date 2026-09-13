@@ -137,6 +137,9 @@ describe("useRoom — événements de partie", () => {
       roundCount: 10,
       targetId: 25,
       localEndsAt: 1_015_000,
+      // Une manche qui s'ouvre est toujours sans réponse : c'est ce qui garantit que le
+      // rappel « Votre réponse » ne déborde pas d'une manche sur la suivante.
+      answeredPokemonId: null,
     });
   });
 

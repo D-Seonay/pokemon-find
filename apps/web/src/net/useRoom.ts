@@ -21,6 +21,13 @@ export type RoundView = {
   roundCount: number;
   targetId: number;
   localEndsAt: number;
+  /**
+   * Le Pokémon que CE joueur a soumis pour la manche, une fois le serveur d'accord.
+   * `null` tant qu'il n'a pas répondu — ou que sa réponse a été refusée, auquel cas il
+   * doit pouvoir resaisir. Le serveur ne renvoie que `hasAnswered`, sans dire quoi :
+   * seul le client sait ce qu'il a envoyé, d'où ce suivi local.
+   */
+  answeredPokemonId: number | null;
 };
 
 export type RevealView = {
@@ -146,6 +153,7 @@ export function useRoom(input: {
         roundCount: payload.roundCount,
         targetId: payload.targetId,
         localEndsAt: Date.now() + (payload.endsAt - payload.serverNow),
+        answeredPokemonId: null,
       });
     });
     socket.on("round:reveal", (payload) => {
@@ -328,8 +336,19 @@ export function useRoom(input: {
       },
       answer: (pokemonId) => {
         if (!round) return;
-        getSocket().emit("round:answer", { roundIndex: round.roundIndex, pokemonId }, (ack) => {
+        const roundIndex = round.roundIndex;
+        getSocket().emit("round:answer", { roundIndex, pokemonId }, (ack) => {
           setActionError(ack.ok ? null : ack.message);
+          if (!ack.ok) return;
+          // Seulement après l'accord du serveur : un refus (hors pool, manche fermée) doit
+          // laisser le joueur resaisir plutôt que de lui montrer une réponse non retenue.
+          // Le contrôle de `roundIndex` écarte un accusé arrivé après le changement de
+          // manche, qui rattacherait la réponse à la mauvaise.
+          setRound((current) =>
+            current && current.roundIndex === roundIndex
+              ? { ...current, answeredPokemonId: pokemonId }
+              : current,
+          );
         });
       },
     },
