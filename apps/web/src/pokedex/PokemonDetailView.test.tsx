@@ -87,7 +87,7 @@ describe("PokemonDetailView", () => {
 
   it("reste lisible sans fiche détaillée, sans proposer d'onglets vides", () => {
     show(undefined);
-    expect(screen.getByText("Bulbizarre")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Bulbizarre" })).toBeInTheDocument();
     expect(screen.queryByRole("tab")).toBeNull();
     expect(screen.getByText(/indisponible/)).toBeInTheDocument();
   });
@@ -98,5 +98,18 @@ describe("PokemonDetailView", () => {
     const widths = bars.map((b) => (b as HTMLElement).style.width);
     // 255 dépasse l'échelle d'affichage (180) : la barre sature au lieu de déborder.
     expect(widths).toContain("100%");
+  });
+});
+
+describe("PokemonDetailView — nom anglais", () => {
+  it("ne répète pas le nom quand les deux langues coïncident", () => {
+    // Pikachu s'appelle Pikachu partout : l'afficher deux fois fait douter de ce qu'on lit.
+    render(<PokemonDetailView pokemon={pokemonById(25)} detail={bulbizarre} maxId={151} />);
+    expect(screen.getAllByText("Pikachu")).toHaveLength(1);
+  });
+
+  it("affiche le nom anglais quand il diffère", () => {
+    render(<PokemonDetailView pokemon={pokemonById(83)} detail={bulbizarre} maxId={151} />);
+    expect(screen.getByText("Farfetch’d")).toBeInTheDocument();
   });
 });

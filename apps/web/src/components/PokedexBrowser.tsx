@@ -24,8 +24,15 @@ import { GenerationPicker } from "./GenerationPicker.js";
  */
 export function PokedexBrowser({
   initialGenerations = [...ALL_GENERATIONS],
+  onSelect,
 }: {
   initialGenerations?: GenerationId[];
+  /**
+   * Ce que fait un clic sur une fiche. Fourni par la page `/pokedex`, qui navigue vers
+   * `/pokedex/:id` en plein écran. Absent dans le lobby multijoueur, où naviguer ferait
+   * quitter la room : la fiche s'y ouvre alors en surcouche.
+   */
+  onSelect?: (pokemon: Pokemon) => void;
 }) {
   const [generations, setGenerations] = useState<GenerationId[]>(initialGenerations);
   const [query, setQuery] = useState("");
@@ -100,7 +107,7 @@ export function PokedexBrowser({
                   pokemon={pokemon}
                   detail={details[String(pokemon.id)]}
                   maxId={pool.maxId}
-                  onOpen={() => setOpen(pokemon)}
+                  onOpen={() => (onSelect ? onSelect(pokemon) : setOpen(pokemon))}
                 />
               </li>
             ))}

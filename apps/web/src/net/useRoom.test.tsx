@@ -181,7 +181,11 @@ describe("useRoom — événements de partie", () => {
     act(() => {
       triggerSocketEvent("game:end", { standings: [], history: [] });
     });
-    expect(result.current.reveal).not.toBeNull(); // game:end ne touche pas reveal…
+    // Ce test affirmait l'inverse — « game:end ne touche pas reveal » — et verrouillait
+    // ainsi le bug signalé en production : la révélation survivait à la fin de partie,
+    // masquée par le classement, puis resurgissait au clic sur « Rejouer ». Une partie
+    // terminée n'a pas de révélation en cours.
+    expect(result.current.reveal).toBeNull();
     expect(result.current.final).toEqual({ standings: [], history: [] });
     expect(result.current.round).toBeNull();
   });

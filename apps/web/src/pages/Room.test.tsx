@@ -1,5 +1,5 @@
 import type { Ack, JoinPayload, PlayerPublic, RoomState } from "@pkfind/shared";
-import { DEFAULT_SETTINGS } from "@pkfind/shared";
+import { DEFAULT_SETTINGS, pokemonById } from "@pkfind/shared";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
@@ -244,6 +244,81 @@ describe("Room — réglages de durée et de nombre de manches par l'hôte", () 
     fireEvent.click(screen.getByRole("radio", { name: "15 manches" }));
     // Aucun temps avancé : le serveur n'a rien confirmé, l'affichage doit déjà suivre.
     expect(screen.getByRole("radio", { name: "15 manches" })).toBeChecked();
+  });
+});
+
+describe("Room — régression : rejouer après une partie terminée", () => {
+  // Signalé en production : « le rejouer ne fonctionne pas, je suis toujours obligé
+  // d'actualiser ». `game:end` remettait `round` à zéro mais laissait la révélation de
+  // la dernière manche en mémoire. Le classement final passait devant, donc rien ne se
+  // voyait — jusqu'au clic sur Rejouer, qui l'effaçait et faisait retomber l'écran sur
+  // cette révélation périmée.
+  function playUntilEnd(): void {
+    settleJoin(makeState({ players: [host(), guest()], status: "round" }));
+    act(() => {
+      triggerSocketEvent("round:reveal", {
+        roundIndex: 9,
+        target: pokemonById(143),
+        results: [],
+        standings: [],
+        revealEndsAt: Date.now() + 6000,
+        serverNow: Date.now(),
+      });
+    });
+    act(() => {
+      triggerSocketEvent("game:end", { standings: [], history: [] });
+    });
+  }
+
+  it("revient au lobby au lieu de rester sur la dernière révélation", () => {
+    renderRoom();
+    playUntilEnd();
+    expect(screen.getByText("Classement final")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Nouvelle partie" }));
+    act(() => {
+      emittedOf("room:playAgain")[0]?.ack?.({ ok: true, data: null });
+      triggerSocketEvent("room:state", makeState({ players: [host(), guest()] }));
+    });
+
+    expect(screen.getByRole("button", { name: "Démarrer" })).toBeInTheDocument();
+    expect(screen.queryByText("Ronflex")).toBeNull();
+  });
+
+  it("abandonne une révélation périmée si la room est revenue au lobby sans nous", () => {
+    renderRoom();
+    settleJoin(makeState({ players: [host(), guest()], status: "round" }));
+    act(() => {
+      triggerSocketEvent("round:reveal", {
+        roundIndex: 0,
+        target: pokemonById(143),
+        results: [],
+        standings: [],
+        revealEndsAt: Date.now() + 6000,
+        serverNow: Date.now(),
+      });
+    });
+    expect(screen.getByText("Ronflex")).toBeInTheDocument();
+
+    // Sans game:end : le cas d'une coupure pendant la révélation, la room qui se vide et
+    // se réinitialise, puis une reconnexion. Seul cet état diffusé nous l'apprend.
+    act(() => {
+      triggerSocketEvent("room:state", makeState({ players: [host(), guest()] }));
+    });
+
+    expect(screen.queryByText("Ronflex")).toBeNull();
+    expect(screen.getByRole("button", { name: "Démarrer" })).toBeInTheDocument();
+  });
+
+  it("ne garde pas la révélation en mémoire une fois la partie finie", () => {
+    renderRoom();
+    playUntilEnd();
+
+    // Même sans rejouer : une partie terminée n'a plus de révélation en cours.
+    act(() => {
+      triggerSocketEvent("room:state", makeState({ players: [host(), guest()] }));
+    });
+    expect(screen.queryByText("Ronflex")).toBeNull();
   });
 });
 

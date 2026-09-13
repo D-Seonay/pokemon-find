@@ -26,14 +26,22 @@ export function PokemonDetailView({
   detail,
   maxId,
   onSelect,
+  headingLevel = "h2",
 }: {
   pokemon: Pokemon;
   detail: PokemonDetail | undefined;
   maxId: number;
+  /**
+   * Le niveau du titre portant le nom. `h1` quand la fiche EST la page (`/pokedex/:id`),
+   * `h2` quand elle s'ouvre en surcouche par-dessus une page qui a déjà son `h1`.
+   * Sans ce réglage, la page devait ajouter un `h1` masqué répétant le nom déjà visible.
+   */
+  headingLevel?: "h1" | "h2";
   /** Naviguer vers un autre Pokémon depuis la chaîne d'évolution. */
   onSelect?: (next: Pokemon) => void;
 }) {
   const [tab, setTab] = useState<Tab>("about");
+  const Heading = headingLevel;
   const accent = primaryType(detail?.types ?? []);
 
   return (
@@ -53,8 +61,12 @@ export function PokemonDetailView({
         <p className="mono text-lg text-[var(--text-dim)]">
           {formatPokedexNumber(pokemon.id, maxId)}
         </p>
-        <h2 className="text-3xl font-extrabold">{pokemon.nameFr}</h2>
-        <p className="text-[var(--text-dim)]">{pokemon.nameEn}</p>
+        <Heading className="text-3xl font-extrabold">{pokemon.nameFr}</Heading>
+        {/* Même règle que les cartes : répéter « Pikachu » sous « Pikachu » n'apprend
+            rien et fait douter de ce qu'on lit. */}
+        {pokemon.nameEn !== pokemon.nameFr && (
+          <p className="text-[var(--text-dim)]">{pokemon.nameEn}</p>
+        )}
         {detail && (
           <p className="text-lg text-[var(--text-dim)]">
             {detail.types.map((t) => labelOfType(t)).join(" / ")}

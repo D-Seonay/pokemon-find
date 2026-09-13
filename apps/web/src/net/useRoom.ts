@@ -145,6 +145,13 @@ export function useRoom(input: {
       // joueurs n'apprennent le retour au lobby que par cette diffusion. Sans ce nettoyage,
       // ils resteraient bloqués sur le classement final de la partie précédente.
       if (nextState.status !== "finished") setFinal(null);
+      // Un lobby n'a ni manche ni révélation en cours : s'y trouver signifie que la partie
+      // précédente est bel et bien close. Filet pour les chemins qui ne passent pas par
+      // `game:end` — une reconnexion pendant le classement, par exemple.
+      if (nextState.status === "lobby") {
+        setRound(null);
+        setReveal(null);
+      }
     });
     socket.on("round:start", (payload) => {
       setReveal(null);
@@ -167,6 +174,11 @@ export function useRoom(input: {
     });
     socket.on("game:end", (payload) => {
       setRound(null);
+      // La révélation de la dernière manche doit disparaître avec la partie. Sans ça elle
+      // reste en mémoire, masquée par le classement final qui passe devant — jusqu'au clic
+      // sur « Rejouer », qui efface le classement et fait retomber l'écran sur cette
+      // révélation périmée, sans autre issue qu'un rechargement.
+      setReveal(null);
       setFinal(payload);
     });
     socket.on("room:closed", (payload) => setClosed(payload.reason));

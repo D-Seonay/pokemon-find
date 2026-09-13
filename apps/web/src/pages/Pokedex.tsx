@@ -1,7 +1,10 @@
+import { useNavigate } from "react-router-dom";
 import { BackLink } from "../components/BackLink.js";
 import { PokedexBrowser } from "../components/PokedexBrowser.js";
 
 export function Pokedex() {
+  const navigate = useNavigate();
+
   return (
     <section className="flex flex-col gap-4">
       <BackLink />
@@ -11,7 +14,7 @@ export function Pokedex() {
         coup à côté de quoi vous êtes passé.
       </p>
 
-      <PokedexBrowser />
+      <PokedexBrowser onSelect={(pokemon) => navigate(`/pokedex/${pokemon.id}`)} />
     </section>
   );
 }
