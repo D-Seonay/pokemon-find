@@ -90,7 +90,9 @@ describe("App — focus et annonce au changement de route (issue #9)", () => {
   it("déplace le focus sur le titre de la page d'arrivée en passant de l'accueil aux réglages solo", async () => {
     const user = userEvent.setup();
     renderAt("/");
-    await user.click(screen.getByRole("button", { name: "Jouer en solo" }));
+    // « Solo » existe dans chacune des deux cartes de jeu ; la première est celle de
+    // « Trouver le numéro », qui mène aux réglages solo.
+    await user.click(screen.getAllByRole("button", { name: "Solo" })[0]!);
     expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Partie solo" }));
   });
 
@@ -172,7 +174,7 @@ describe("App — focus et annonce au changement de route (issue #9)", () => {
   it("ne force aucun focus sur /room/:code tant qu'aucun titre n'est encore monté (connexion en cours)", async () => {
     const user = userEvent.setup();
     renderAt("/");
-    await user.click(screen.getByRole("button", { name: "Créer une room" }));
+    await user.click(screen.getAllByRole("button", { name: "Multijoueur" })[0]!);
     // `Room` n'a pas encore de <h1> à ce stade — voir Room.tsx, l'état "Connexion…" est un
     // simple paragraphe tant que le serveur n'a pas répondu. L'effet ne doit rien casser ni
     // focaliser un élément non pertinent : voir le rapport pour la justification de ne pas

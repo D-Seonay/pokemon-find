@@ -96,6 +96,44 @@ describe("Room — blitz : réglage du mode", () => {
   });
 });
 
+describe("Room — blitz : mode choisi depuis l'accueil", () => {
+  it("applique le jeu demandé à la création, sans le refaire choisir à l'hôte", () => {
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={[{ pathname: "/room/new", state: { mode: "blitz" } }]}>
+          <Routes>
+            <Route path="/room/:code" element={<Room />} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>,
+    );
+    // Une room créée émet `room:create`, pas `room:join` : c'est cet accusé qu'il faut
+    // rendre. La room naît en mode classique côté serveur ; c'est l'intention venue de
+    // l'accueil qui la bascule.
+    const created = blitzState({ code: "WXYZ", gameMode: "classic" });
+    act(() => {
+      emittedOf("room:create")[0]?.ack?.({
+        ok: true,
+        data: {
+          roomCode: created.code,
+          playerId: "host-1",
+          playerToken: "tok-1234",
+          nickname: "Mathéo",
+          state: created,
+        },
+      });
+    });
+
+    expect(emittedOf("room:mode")[0]?.payload).toMatchObject({ mode: "blitz" });
+  });
+
+  it("ne touche à rien quand l'accueil n'a demandé aucun jeu en particulier", () => {
+    renderRoom();
+    settleJoin(blitzState({ gameMode: "classic" }));
+    expect(emittedOf("room:mode")).toHaveLength(0);
+  });
+});
+
 describe("Room — blitz : ce que le lobby annonce", () => {
   // Trouvés en jouant une vraie partie à deux : l'invité lisait « Générations : 1 · 15 s ·
   // 10 manches » alors que la room était en contre-la-montre à 3 minutes. Il ignorait à

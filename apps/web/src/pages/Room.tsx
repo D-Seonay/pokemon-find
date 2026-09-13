@@ -1,6 +1,12 @@
-import { buildPool, type GameSettings, isUnlimitedRound, tryPokemonById } from "@pkfind/shared";
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  buildPool,
+  type GameMode,
+  type GameSettings,
+  isUnlimitedRound,
+  tryPokemonById,
+} from "@pkfind/shared";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button.js";
 import { GenerationPicker } from "../components/GenerationPicker.js";
 import { PokedexBrowser } from "../components/PokedexBrowser.js";
@@ -21,6 +27,7 @@ import { KEYS, readJson } from "../storage/local.js";
 export function Room() {
   const { code = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const nickname = readJson(KEYS.nickname, "Dresseur");
   const room = useRoom({
     code,
@@ -29,11 +36,28 @@ export function Room() {
     onCreated: (realCode) => navigate(`/room/${realCode}`, { replace: true }),
   });
 
+  // Le jeu voulu, transmis par l'accueil quand on y a cliqué « Multijoueur » sur une carte
+  // précise. La room naît toujours en mode classique côté serveur ; on l'aligne une fois,
+  // dès qu'on est hôte, pour ne pas faire refaire à l'hôte un choix déjà exprimé.
+  const requestedMode = (location.state as { mode?: GameMode } | null)?.mode;
+  const modeApplied = useRef(false);
+
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const handle = setInterval(() => setNow(Date.now()), 100);
     return () => clearInterval(handle);
   }, []);
+
+  const liveState = room.state;
+  const amHost = liveState?.players.find((player) => player.id === room.playerId)?.isHost ?? false;
+  const setMode = room.actions.setMode;
+  const blitzSettings = liveState?.blitzSettings;
+  useEffect(() => {
+    if (modeApplied.current) return;
+    if (!requestedMode || !amHost || !blitzSettings) return;
+    modeApplied.current = true;
+    setMode(requestedMode, blitzSettings);
+  }, [amHost, blitzSettings, requestedMode, setMode]);
 
   // GenerationPicker est entièrement piloté par l'état serveur (`value` ci-dessous vient de
   // `state.settings.generations`) : deux clics rapprochés recalculeraient sinon tous deux

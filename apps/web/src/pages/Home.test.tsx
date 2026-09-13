@@ -32,10 +32,11 @@ function renderHome(): void {
 }
 
 describe("Home", () => {
+  // Les boutons « Solo » et « Multijoueur » existent maintenant dans chacune des deux
+  // cartes de jeu : on les cible par leur carte, pas par un libellé devenu ambigu.
+  // Le routage propre à chaque carte est couvert par Home.modes.test.tsx.
   it.each([
-    ["Jouer en solo", "/solo"],
     ["Défi du jour", "/daily"],
-    ["Créer une room", "/room/new"],
     ["Rejoindre une room", "/join"],
     ["Pokédex", "/pokedex"],
     ["Statistiques", "/stats"],
@@ -53,7 +54,7 @@ describe("Home", () => {
     renderHome();
 
     await user.type(screen.getByLabelText("Ton pseudo"), "Sacha");
-    await user.click(screen.getByRole("button", { name: "Jouer en solo" }));
+    await user.click(screen.getAllByRole("button", { name: "Solo" })[0]!);
 
     expect(localStorage.getItem(KEYS.nickname)).toBe(JSON.stringify("Sacha"));
   });
@@ -63,7 +64,7 @@ describe("Home", () => {
     renderHome();
 
     await user.type(screen.getByLabelText("Ton pseudo"), "  Sacha  ");
-    await user.click(screen.getByRole("button", { name: "Jouer en solo" }));
+    await user.click(screen.getAllByRole("button", { name: "Solo" })[0]!);
 
     expect(localStorage.getItem(KEYS.nickname)).toBe(JSON.stringify("Sacha"));
   });
