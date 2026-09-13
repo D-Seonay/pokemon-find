@@ -7,7 +7,10 @@ import {
 } from "@pkfind/shared";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { Alert } from "../components/Alert.js";
+import { BackLink } from "../components/BackLink.js";
 import { Button } from "../components/Button.js";
+import { CopyButton } from "../components/CopyButton.js";
 import { GenerationPicker } from "../components/GenerationPicker.js";
 import { PokedexBrowser } from "../components/PokedexBrowser.js";
 import { PokemonSprite } from "../components/PokemonSprite.js";
@@ -84,7 +87,15 @@ export function Room() {
   // elle remplace tout l'écran pour le reste de la session. Toute erreur d'action
   // (répondre en retard, redémarrer une partie déjà lancée, etc.) est passagère et ne doit
   // jamais produire cet écran mort : voir `room.actionError` plus bas.
-  if (room.error) return <p style={{ color: "var(--danger)" }}>{room.error}</p>;
+  if (room.error) {
+    // Erreur fatale : l'écran était un paragraphe rouge nu, sans aucun moyen de repartir.
+    return (
+      <section className="flex flex-col gap-4">
+        <Alert tone="error">{room.error}</Alert>
+        <BackLink label="Retour à l'accueil" />
+      </section>
+    );
+  }
   if (!room.state) return <p>Connexion…</p>;
 
   const state = room.state;
@@ -233,13 +244,7 @@ export function Room() {
           {state.code}
         </p>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button
-            variant="ghost"
-            onClick={() => void navigator.clipboard.writeText(roomUrl)}
-            className="flex-1"
-          >
-            Copier le lien
-          </Button>
+          <CopyButton value={roomUrl} label="Copier le lien" className="flex-1" />
           <Button variant="ghost" onClick={() => setQrOpen((open) => !open)} className="flex-1">
             {qrOpen ? "Masquer le QR code" : "Afficher le QR code"}
           </Button>
@@ -340,16 +345,9 @@ export function Room() {
         </p>
       )}
       {room.actionError && (
-        <p
-          role="alert"
-          className="flex items-center justify-between gap-3 rounded-[var(--radius-sm)] border border-[var(--danger)] px-4 py-2"
-          style={{ color: "var(--danger)" }}
-        >
-          <span>{room.actionError}</span>
-          <Button variant="ghost" onClick={room.actions.dismissActionError}>
-            Fermer
-          </Button>
-        </p>
+        <Alert tone="error" onDismiss={room.actions.dismissActionError}>
+          {room.actionError}
+        </Alert>
       )}
       {renderBody()}
     </div>

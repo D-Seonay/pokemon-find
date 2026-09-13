@@ -160,7 +160,7 @@ describe("Room — lobby", () => {
     );
     const alert = screen.getByRole("alert");
     expect(alert).toHaveTextContent("Il faut au moins 2 joueurs connectés pour démarrer.");
-    fireEvent.click(within(alert).getByRole("button", { name: "Fermer" }));
+    fireEvent.click(within(alert).getByRole("button", { name: "Fermer le message" }));
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });

@@ -8,11 +8,11 @@ import {
   tierOf,
 } from "@pkfind/shared";
 import { useEffect, useState } from "react";
-import { Button } from "../components/Button.js";
 import { PokemonCombobox } from "../components/PokemonCombobox.js";
 import { RoundResult } from "../components/RoundResult.js";
 import { TargetNumber } from "../components/TargetNumber.js";
 import { BackLink } from "../components/BackLink.js";
+import { CopyButton } from "../components/CopyButton.js";
 import { Timer } from "../components/Timer.js";
 import { useSoloGame } from "../game/useSoloGame.js";
 import { type DailyEntry, currentStreak, readHistory, recordDaily } from "../storage/daily.js";
@@ -83,27 +83,21 @@ function DailyBoard({
 }
 
 function DailyResult({ entry, today }: { entry: DailyEntry; today: string }) {
-  const [copied, setCopied] = useState(false);
   // Lu une seule fois : l'historique ne bouge plus une fois la partie du jour terminée.
   const [history] = useState(readHistory);
   const streak = currentStreak(history, today);
   const emojis = entry.points.map((points) => TIER_EMOJI[tierOf(points)]).join("");
   const max = entry.points.length * MAX_SCORE;
 
-  async function copy(): Promise<void> {
-    const text = shareText({
-      date: new Date(`${entry.date}T12:00:00Z`),
-      total: entry.total,
-      points: entry.points,
-      url: `${window.location.origin}/daily`,
-    });
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-    } catch {
-      window.prompt("Copie ce résumé :", text);
-    }
-  }
+  // Calculé au rendu plutôt que dans un gestionnaire : `CopyButton` reçoit la valeur et se
+  // charge du reste, y compris de dire ce qui s'est passé. L'ancienne version ouvrait un
+  // `window.prompt` en cas d'échec — une boîte modale bloquante pour un simple partage.
+  const summary = shareText({
+    date: new Date(`${entry.date}T12:00:00Z`),
+    total: entry.total,
+    points: entry.points,
+    url: `${window.location.origin}/daily`,
+  });
 
   return (
     <section className="flex flex-col gap-4 text-center">
@@ -132,7 +126,7 @@ function DailyResult({ entry, today }: { entry: DailyEntry; today: string }) {
           ))}
         </ul>
       )}
-      <Button onClick={copy}>{copied ? "Copié" : "Partager le résultat"}</Button>
+      <CopyButton value={summary} label="Partager le résultat" />
       <p className="text-sm text-[var(--text-dim)]">Reviens demain pour un nouveau défi.</p>
     </section>
   );
