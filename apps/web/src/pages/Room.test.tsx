@@ -1,5 +1,5 @@
 import type { Ack, JoinPayload, PlayerPublic, RoomState } from "@pkfind/shared";
-import { DEFAULT_SETTINGS, pokemonById } from "@pkfind/shared";
+import { DEFAULT_BLITZ_SETTINGS, DEFAULT_SETTINGS, pokemonById } from "@pkfind/shared";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
@@ -43,7 +43,9 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
   return {
     code: "ABCD",
     status: "lobby",
+    gameMode: "classic",
     settings: DEFAULT_SETTINGS,
+    blitzSettings: DEFAULT_BLITZ_SETTINGS,
     players: [host()],
     roundIndex: 0,
     roundCount: DEFAULT_SETTINGS.roundCount,

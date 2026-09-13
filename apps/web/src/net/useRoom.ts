@@ -1,6 +1,8 @@
 import {
   type Ack,
+  type BlitzSettings,
   DEFAULT_SETTINGS,
+  type GameMode,
   type GameSettings,
   type Pokemon,
   type RoomState,
@@ -16,6 +18,14 @@ type Session = { roomCode: string; playerId: string; playerToken: string };
 
 const SETTINGS_DEBOUNCE_MS = 250;
 
+/**
+ * Délai de regroupement des trouvailles blitz avant envoi. Une seconde : un joueur rapide
+ * trouve quelques Pokémon par seconde, et un événement par trouvaille le ferait passer
+ * au-dessus des 20 événements / 10 s tolérés par le serveur. Ainsi, dix envois par
+ * fenêtre au maximum, quelle que soit sa vitesse de frappe.
+ */
+export const BLITZ_FLUSH_MS = 1000;
+
 export type RoundView = {
   roundIndex: number;
   roundCount: number;
@@ -28,6 +38,16 @@ export type RoundView = {
    * seul le client sait ce qu'il a envoyé, d'où ce suivi local.
    */
   answeredPokemonId: number | null;
+};
+
+/**
+ * La partie blitz en cours, vue par CE joueur : sa propre liste de trouvailles et
+ * l'échéance. Le classement des autres passe par `state.players`, qui ne porte que des
+ * compteurs — jamais ce qu'ils ont trouvé.
+ */
+export type BlitzView = {
+  localEndsAt: number;
+  found: number[];
 };
 
 export type RevealView = {
@@ -49,6 +69,7 @@ export type RoomView = {
   playerId: string | null;
   round: RoundView | null;
   reveal: RevealView | null;
+  blitz: BlitzView | null;
   final: { standings: Standing[]; history: RoundResult[][] } | null;
   actions: {
     start: () => void;
@@ -60,6 +81,15 @@ export type RoomView = {
      */
     setSettings: (settings: GameSettings, onSettled?: (ack: Ack<unknown>) => void) => void;
     answer: (pokemonId: number) => void;
+    /**
+     * Soumet un nom trouvé en blitz. Les noms sont TAMPONNÉS puis envoyés par paquets :
+     * un événement par trouvaille ferait dépasser la limite de débit du serveur
+     * (20 événements / 10 s) à un joueur rapide, qui se ferait déconnecter pour avoir
+     * bien joué. Un envoi par seconde fait 10 par fenêtre, la moitié du plafond.
+     */
+    submitBlitz: (name: string) => void;
+    /** Choisit le jeu de la prochaine partie et, dans la foulée, les réglages blitz. */
+    setMode: (mode: GameMode, blitz: BlitzSettings) => void;
     /** `sameSeries: true` rejoue la série de cibles de la partie qui vient de se terminer. */
     playAgain: (sameSeries: boolean) => void;
     leave: () => void;
@@ -76,6 +106,9 @@ export function useRoom(input: {
   const [state, setState] = useState<RoomState | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [round, setRound] = useState<RoundView | null>(null);
+  const [blitz, setBlitz] = useState<BlitzView | null>(null);
+  const blitzBuffer = useRef<string[]>([]);
+  const blitzTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [reveal, setReveal] = useState<RevealView | null>(null);
   const [final, setFinal] = useState<RoomView["final"]>(null);
   const [error, setError] = useState<string | null>(null);
@@ -151,7 +184,17 @@ export function useRoom(input: {
       if (nextState.status === "lobby") {
         setRound(null);
         setReveal(null);
+        setBlitz(null);
       }
+    });
+    socket.on("blitz:start", (payload) => {
+      setRound(null);
+      setReveal(null);
+      setFinal(null);
+      setBlitz({
+        localEndsAt: Date.now() + (payload.endsAt - payload.serverNow),
+        found: payload.found,
+      });
     });
     socket.on("round:start", (payload) => {
       setReveal(null);
@@ -174,6 +217,7 @@ export function useRoom(input: {
     });
     socket.on("game:end", (payload) => {
       setRound(null);
+      setBlitz(null);
       // La révélation de la dernière manche doit disparaître avec la partie. Sans ça elle
       // reste en mémoire, masquée par le classement final qui passe devant — jusqu'au clic
       // sur « Rejouer », qui efface le classement et fait retomber l'écran sur cette
@@ -212,6 +256,7 @@ export function useRoom(input: {
 
     return () => {
       socket.off("room:state");
+      socket.off("blitz:start");
       socket.off("round:start");
       socket.off("round:reveal");
       socket.off("game:end");
@@ -320,6 +365,7 @@ export function useRoom(input: {
     playerId,
     round,
     reveal,
+    blitz,
     final,
     actions: {
       start: () => emitSimple("room:start"),
@@ -345,6 +391,29 @@ export function useRoom(input: {
             onSettled?.(ack);
           });
         }, SETTINGS_DEBOUNCE_MS);
+      },
+      setMode: (mode, blitz) => {
+        getSocket().emit("room:mode", { mode, blitz }, (ack) => {
+          setActionError(ack.ok ? null : ack.message);
+        });
+      },
+      submitBlitz: (name) => {
+        blitzBuffer.current.push(name);
+        if (blitzTimer.current !== null) return;
+        blitzTimer.current = setTimeout(() => {
+          blitzTimer.current = null;
+          const names = blitzBuffer.current;
+          blitzBuffer.current = [];
+          if (names.length === 0) return;
+          getSocket().emit("blitz:submit", { names }, (ack) => {
+            setActionError(ack.ok ? null : ack.message);
+            // Le serveur fait foi : il revalide chaque nom contre le pool et renvoie la
+            // liste complète. On s'aligne dessus plutôt que de tenir un compte local qui
+            // pourrait diverger.
+            if (ack.ok)
+              setBlitz((current) => (current ? { ...current, found: ack.data.found } : current));
+          });
+        }, BLITZ_FLUSH_MS);
       },
       answer: (pokemonId) => {
         if (!round) return;

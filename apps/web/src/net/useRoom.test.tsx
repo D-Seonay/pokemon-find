@@ -1,5 +1,5 @@
 import type { Ack, JoinPayload, RoomState } from "@pkfind/shared";
-import { DEFAULT_SETTINGS } from "@pkfind/shared";
+import { DEFAULT_BLITZ_SETTINGS, DEFAULT_SETTINGS } from "@pkfind/shared";
 import { act, render, renderHook } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -36,7 +36,9 @@ function makeState(overrides: Partial<RoomState> = {}): RoomState {
   return {
     code: "ABCD",
     status: "lobby",
+    gameMode: "classic",
     settings: DEFAULT_SETTINGS,
+    blitzSettings: DEFAULT_BLITZ_SETTINGS,
     players: [
       {
         id: "host-1",

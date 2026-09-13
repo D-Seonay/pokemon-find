@@ -17,6 +17,26 @@ export const ROUND_COUNTS = [5, 10, 15] as const;
 export type RoundDurationMs = (typeof ROUND_DURATIONS)[number];
 export type RoundCount = (typeof ROUND_COUNTS)[number];
 
+/**
+ * Le jeu auquel une room joue. Deux jeux réellement différents, pas deux variantes d'un
+ * même : « classic » fait deviner un numéro par manche, « blitz » fait nommer le plus de
+ * Pokémon possible d'une traite. D'où deux moteurs côté serveur et deux jeux de réglages
+ * (`GameSettings` ici, `BlitzSettings` dans `blitz.ts`) plutôt qu'un champ de plus.
+ */
+export const GAME_MODES = ["classic", "blitz"] as const;
+
+export type GameMode = (typeof GAME_MODES)[number];
+
+export const DEFAULT_GAME_MODE: GameMode = "classic";
+
+/** Le mode envoyé par un client, ou une erreur : le client n'est jamais cru sur parole. */
+export function validateGameMode(input: unknown): GameMode {
+  if (!GAME_MODES.includes(input as GameMode)) {
+    throw new InvalidSettingsError("Mode de jeu invalide.");
+  }
+  return input as GameMode;
+}
+
 export type GameSettings = {
   generations: GenerationId[];
   roundDurationMs: RoundDurationMs;

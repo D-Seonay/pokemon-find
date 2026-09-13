@@ -6,6 +6,8 @@ import { GenerationPicker } from "../components/GenerationPicker.js";
 import { PokedexBrowser } from "../components/PokedexBrowser.js";
 import { PokemonSprite } from "../components/PokemonSprite.js";
 import { QrCode } from "../components/QrCode.js";
+import { BlitzRoom } from "../blitz/BlitzRoom.js";
+import { GameModePicker } from "../blitz/GameModePicker.js";
 import { RoundTimingPicker } from "../components/RoundTimingPicker.js";
 import { MultiReveal } from "../components/MultiReveal.js";
 import { PokemonCombobox } from "../components/PokemonCombobox.js";
@@ -90,6 +92,21 @@ export function Room() {
     if (room.reveal) {
       return (
         <MultiReveal target={room.reveal.target} results={room.reveal.results} maxId={pool.maxId} />
+      );
+    }
+
+    if (room.blitz) {
+      const blitzPool = buildPool(state.blitzSettings.generations);
+      return (
+        <BlitzRoom
+          pool={blitzPool}
+          found={room.blitz.found}
+          endsAt={room.blitz.localEndsAt}
+          now={now}
+          players={state.players}
+          onFound={(pokemon) => room.actions.submitBlitz(pokemon.nameFr)}
+          {...(room.playerId ? { playerId: room.playerId } : {})}
+        />
       );
     }
 
@@ -228,6 +245,11 @@ export function Room() {
         )}
         {isHost ? (
           <>
+            <GameModePicker
+              mode={state.gameMode}
+              blitz={state.blitzSettings}
+              onChange={(mode, blitz) => room.actions.setMode(mode, blitz)}
+            />
             <GenerationPicker
               value={shownSettings.generations}
               onChange={(generations) => applySettings({ generations })}

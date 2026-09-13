@@ -1,7 +1,7 @@
 import { type BlitzSettings, DEFAULT_BLITZ_SETTINGS } from "@pkfind/shared";
-import { useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { BlitzGrid } from "../blitz/BlitzGrid.js";
+import { BlitzInput } from "../blitz/BlitzInput.js";
 import { Button } from "../components/Button.js";
 import { useBlitzGame } from "../game/useBlitzGame.js";
 import { formatBlitzDuration } from "./BlitzSetup.js";
@@ -18,13 +18,6 @@ export function BlitzGame() {
   const location = useLocation();
   const settings = (location.state as BlitzSettings | null) ?? DEFAULT_BLITZ_SETTINGS;
   const game = useBlitzGame(settings);
-  const field = useRef<HTMLInputElement>(null);
-
-  // Le champ prend le focus au démarrage : dans un jeu chronométré, demander un clic
-  // avant de pouvoir taper coûte des secondes au joueur.
-  useEffect(() => {
-    field.current?.focus();
-  }, []);
 
   const total = game.pool.ids.length;
 
@@ -62,25 +55,12 @@ export function BlitzGame() {
         </p>
       </header>
 
-      {/* Un champ libre, sans autocomplétion : suggérer les noms donnerait les réponses,
-          ce qui est précisément ce qu'on demande au joueur de retrouver. */}
-      <input
-        ref={field}
+      <BlitzInput
         value={game.entry}
-        onChange={(event) => game.submit(event.target.value)}
-        aria-label="Nommer un Pokémon"
-        placeholder="Tapez un nom…"
-        autoComplete="off"
-        autoCorrect="off"
-        spellCheck={false}
-        className="h-12 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-3 text-[var(--text)]"
+        onChange={game.submit}
+        foundCount={game.found.length}
+        total={total}
       />
-
-      {/* Le compteur est déjà affiché ; cette région ne sert qu'à annoncer les trouvailles
-          à un lecteur d'écran, qui ne verrait sinon rien se passer. */}
-      <p aria-live="polite" className="sr-only">
-        {game.found.length} Pokémon trouvés sur {total}
-      </p>
 
       <Button variant="ghost" onClick={game.stop}>
         Terminer maintenant

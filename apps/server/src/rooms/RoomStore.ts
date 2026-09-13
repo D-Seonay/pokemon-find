@@ -105,6 +105,7 @@ export class RoomStore {
       onState: (state) => room().emit("room:state", state),
       onCountdown: (payload) => room().emit("game:countdown", payload),
       onRoundStart: (payload) => room().emit("round:start", payload),
+      onBlitzStart: (payload) => room().emit("blitz:start", payload),
       onAnswered: (payload) => room().emit("round:answered", payload),
       onReveal: ({ targetId, ...rest }) =>
         room().emit("round:reveal", { ...rest, target: pokemonById(targetId) }),

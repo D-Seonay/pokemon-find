@@ -1,14 +1,27 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import {
+  type BlitzSettings,
+  DEFAULT_BLITZ_SETTINGS,
+  DEFAULT_GAME_MODE,
   DEFAULT_SETTINGS,
+  type GameMode,
   type GameSettings,
   type PlayerPublic,
   type RoomState,
   type RoomStatus,
+  validateBlitzSettings,
+  validateGameMode,
   validateSettings,
 } from "@pkfind/shared";
+import {
+  BlitzEngine,
+  type BlitzOnlyListeners,
+  type BlitzSnapshot,
+  type BlitzTimings,
+} from "./BlitzEngine.js";
 import { RoomError } from "./errors.js";
 import {
+  type PlayerProgress,
   type RejoinSnapshot,
   RoundEngine,
   type RoundListeners,
@@ -18,17 +31,49 @@ import {
 export { RoomError };
 export type { RejoinSnapshot };
 
+/**
+ * L'instantané rendu à un socket qui se reconnecte, quel que soit le jeu en cours : les
+ * variantes du mode classique, plus celle du blitz. `kind: "end"` sert aux deux — un
+ * classement final est un classement final.
+ */
+export type RoomSnapshot = RejoinSnapshot | BlitzSnapshot;
+
+/**
+ * La poignée par laquelle `Room` tient le jeu en cours, sans savoir lequel c'est.
+ * `RoundEngine` et `BlitzEngine` l'implémentent tous deux ; tout ce qui est propre à un
+ * jeu (série de cibles, liste de trouvailles) reste derrière, dans son moteur.
+ */
+type GameEngine = {
+  readonly phase: RoomStatus;
+  progressOf: (playerId: string) => PlayerProgress;
+  reset: () => void;
+  dispose: () => void;
+};
+
 export const MAX_PLAYERS = 8;
 export const MIN_PLAYERS_TO_START = 2;
 
 const NICKNAME_PATTERN = /^[\p{L}\p{N} _.-]{2,16}$/u;
 
-export type RoomTimings = RoundTimings;
-
-/** Les événements de partie (`RoundListeners`, émis par le moteur) plus `room:state`. */
-export type RoomListeners = RoundListeners & {
-  onState: (state: RoomState) => void;
+export type RoomTimings = RoundTimings & {
+  /** Réservé aux tests : court-circuite la durée blitz des réglages (une minute au minimum). */
+  blitzDurationMsOverride?: number;
 };
+
+/**
+ * Les événements de partie (`RoundListeners`, émis par le moteur de manches) plus
+ * `room:state`, plus le seul événement propre au blitz.
+ *
+ * `onBlitzStart` est optionnel, et c'est délibéré : le rendre obligatoire casserait la
+ * compilation de tout appelant existant qui construit un jeu d'écouteurs — à commencer par
+ * les tests du mode classique, qui doivent rester intacts. Le câblage réel (`RoomStore`)
+ * est verrouillé par les tests d'intégration socket, qui vérifient que `blitz:start`
+ * parvient bien aux clients.
+ */
+export type RoomListeners = RoundListeners &
+  Partial<BlitzOnlyListeners> & {
+    onState: (state: RoomState) => void;
+  };
 
 /**
  * L'appartenance à la room : identité, jeton de reconnexion, présence, ancienneté. Aucun
@@ -54,7 +99,10 @@ export class Room {
   private players: Player[] = [];
   private hostId: string | null = null;
   private settings: GameSettings = DEFAULT_SETTINGS;
+  private blitzSettings: BlitzSettings = DEFAULT_BLITZ_SETTINGS;
+  private mode: GameMode = DEFAULT_GAME_MODE;
   private readonly rounds: RoundEngine;
+  private readonly blitz: BlitzEngine;
 
   constructor(
     readonly code: string,
@@ -72,10 +120,23 @@ export class Room {
       },
       newGameSeed,
     );
+    this.blitz = new BlitzEngine(blitzTimings(timings), listeners, {
+      roster: () => this.players,
+      settings: () => this.blitzSettings,
+      emitState: () => this.emitState(),
+    });
+  }
+
+  /**
+   * Le moteur du jeu choisi. Un seul est actif à la fois : le mode ne change qu'en lobby,
+   * où les deux sont au repos, donc leurs phases ne peuvent jamais se contredire.
+   */
+  private get engine(): GameEngine {
+    return this.mode === "blitz" ? this.blitz : this.rounds;
   }
 
   get status(): RoomStatus {
-    return this.rounds.phase;
+    return this.engine.phase;
   }
 
   get playerCount(): number {
@@ -91,7 +152,7 @@ export class Room {
   }
 
   addPlayer(rawNickname: string): { playerId: string; playerToken: string; nickname: string } {
-    if (this.rounds.phase !== "lobby") throw new RoomError("GAME_IN_PROGRESS");
+    if (this.status !== "lobby") throw new RoomError("GAME_IN_PROGRESS");
     if (this.players.length >= MAX_PLAYERS) throw new RoomError("ROOM_FULL");
 
     const nickname = this.uniqueNickname(rawNickname.trim());
@@ -127,7 +188,7 @@ export class Room {
     // tourner dans le vide, et quiconque revient dans la fenêtre de grâce doit retrouver le
     // lobby, pas une partie terminée avec un classement vide. `resetToLobby()` fait déjà son
     // propre `emitState()`, d'où le retour anticipé plutôt qu'un double envoi.
-    if (this.connectedCount === 0 && this.rounds.phase !== "lobby") {
+    if (this.connectedCount === 0 && this.status !== "lobby") {
       this.resetToLobby();
       return;
     }
@@ -138,7 +199,7 @@ export class Room {
     this.players = this.players.filter((player) => player.id !== playerId);
     if (this.hostId === playerId) this.hostId = null;
     this.reassignHostIfNeeded();
-    if (this.connectedCount === 0 && this.rounds.phase !== "lobby") {
+    if (this.connectedCount === 0 && this.status !== "lobby") {
       this.resetToLobby();
       return;
     }
@@ -147,7 +208,7 @@ export class Room {
 
   updateSettings(playerId: string, settings: unknown): void {
     this.assertHost(playerId);
-    if (this.rounds.phase !== "lobby") throw new RoomError("GAME_IN_PROGRESS");
+    if (this.status !== "lobby") throw new RoomError("GAME_IN_PROGRESS");
     try {
       this.settings = validateSettings(settings);
     } catch {
@@ -168,15 +229,36 @@ export class Room {
     }
   }
 
+  /**
+   * Choisit le jeu de la prochaine partie et ses réglages blitz d'un seul geste. Les deux
+   * ensemble parce qu'ils se règlent ensemble côté hôte ; les réglages blitz sont validés
+   * même en restant en classique, un client n'ayant pas à pouvoir déposer n'importe quoi
+   * dans l'état de la room en attendant de basculer.
+   */
+  updateMode(playerId: string, mode: unknown, blitzSettings: unknown): void {
+    this.assertHost(playerId);
+    if (this.status !== "lobby") throw new RoomError("GAME_IN_PROGRESS");
+    try {
+      const nextMode = validateGameMode(mode);
+      const nextBlitz = validateBlitzSettings(blitzSettings);
+      this.mode = nextMode;
+      this.blitzSettings = nextBlitz;
+    } catch {
+      throw new RoomError("INVALID_SETTINGS");
+    }
+    this.emitState();
+  }
+
   isConnected(playerId: string): boolean {
     return this.players.some((player) => player.id === playerId && player.connected);
   }
 
   start(playerId: string): void {
     this.assertHost(playerId);
-    if (this.rounds.phase !== "lobby") throw new RoomError("GAME_IN_PROGRESS");
+    if (this.status !== "lobby") throw new RoomError("GAME_IN_PROGRESS");
     if (this.connectedCount < MIN_PLAYERS_TO_START) throw new RoomError("NOT_ENOUGH_PLAYERS");
-    this.rounds.start();
+    if (this.mode === "blitz") this.blitz.start();
+    else this.rounds.start();
   }
 
   answer(playerId: string, roundIndex: number, pokemonId: number): void {
@@ -187,6 +269,15 @@ export class Room {
   }
 
   /**
+   * Une fournée de noms saisis en blitz. Comme pour `answer`, `NOT_IN_ROOM` prime : on
+   * vérifie l'appartenance ici, où elle est connue, avant de laisser le moteur juger.
+   */
+  submitBlitz(playerId: string, names: unknown): { count: number; found: number[] } {
+    this.find(playerId);
+    return this.blitz.submit(playerId, names);
+  }
+
+  /**
    * `sameSeries` : rejoue la série de cibles de la partie qui vient de se terminer (même
    * graine, donc mêmes numéros dans le même ordre) plutôt que d'en tirer une nouvelle.
    * Toujours possible ici : atteindre l'état `finished` exige d'avoir déjà démarré une
@@ -194,22 +285,27 @@ export class Room {
    */
   playAgain(playerId: string, sameSeries = false): void {
     this.assertHost(playerId);
-    if (this.rounds.phase !== "finished") throw new RoomError("GAME_IN_PROGRESS");
-    this.rounds.chooseReplayMode(sameSeries);
+    if (this.status !== "finished") throw new RoomError("GAME_IN_PROGRESS");
+    // Rejouer « la même série » n'a de sens qu'avec une série de cibles : le blitz n'en a
+    // pas, il repart simplement en lobby.
+    if (this.mode === "classic") this.rounds.chooseReplayMode(sameSeries);
     this.resetToLobby();
   }
 
   dispose(): void {
     this.rounds.dispose();
+    this.blitz.dispose();
   }
 
   toState(): RoomState {
     return {
       code: this.code,
-      status: this.rounds.phase,
+      status: this.status,
+      gameMode: this.mode,
       settings: this.settings,
+      blitzSettings: this.blitzSettings,
       players: this.players.map((player): PlayerPublic => {
-        const progress = this.rounds.progressOf(player.id);
+        const progress = this.engine.progressOf(player.id);
         return {
           id: player.id,
           nickname: player.nickname,
@@ -219,9 +315,9 @@ export class Room {
           hasAnswered: progress.hasAnswered,
         };
       }),
-      roundIndex: this.rounds.roundIndex,
+      roundIndex: this.mode === "classic" ? this.rounds.roundIndex : -1,
       roundCount: this.settings.roundCount,
-      replayMode: this.rounds.replayMode,
+      replayMode: this.mode === "classic" ? this.rounds.replayMode : null,
     };
   }
 
@@ -230,8 +326,15 @@ export class Room {
    * `room:state` pour retrouver l'écran de jeu courant. Voir `RoundEngine.snapshot()` :
    * le Pokémon cible n'en sort jamais, seul son numéro.
    */
-  snapshotForRejoin(): RejoinSnapshot {
-    return this.rounds.snapshot();
+  snapshotForRejoin(playerId: string): RoomSnapshot {
+    if (this.mode !== "blitz") return this.rounds.snapshot();
+    // Une partie blitz terminée rend le même classement final que le mode classique : la
+    // variante « blitz » de l'instantané ne sert que pendant la session elle-même.
+    if (this.blitz.phase === "finished") {
+      return { kind: "end", payload: { standings: this.blitz.standings(), history: [] } };
+    }
+    if (this.blitz.phase !== "blitz") return { kind: "none" };
+    return this.blitz.snapshot(playerId);
   }
 
   private uniqueNickname(nickname: string): string {
@@ -256,7 +359,7 @@ export class Room {
 
   /** Coupe la partie en cours et rediffuse le lobby. */
   private resetToLobby(): void {
-    this.rounds.reset();
+    this.engine.reset();
     this.emitState();
   }
 
@@ -273,4 +376,15 @@ export class Room {
   protected emitState(): void {
     this.listeners.onState(this.toState());
   }
+}
+
+/** Les réglages temporels que `BlitzEngine` consomme, extraits de ceux de la room. */
+function blitzTimings(timings: RoomTimings): BlitzTimings {
+  return {
+    countdownMs: timings.countdownMs,
+    answerGraceMs: timings.answerGraceMs,
+    ...(timings.blitzDurationMsOverride === undefined
+      ? {}
+      : { durationMsOverride: timings.blitzDurationMsOverride }),
+  };
 }

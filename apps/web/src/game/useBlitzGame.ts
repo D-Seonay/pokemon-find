@@ -1,5 +1,6 @@
-import { type BlitzSettings, type Pool, buildPool, matchPokemonName } from "@pkfind/shared";
+import { type BlitzSettings, type Pool, buildPool } from "@pkfind/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useBlitzEntry } from "../blitz/useBlitzEntry.js";
 
 export type BlitzPhase = "playing" | "finished";
 
@@ -19,7 +20,6 @@ export function useBlitzGame(settings: BlitzSettings): BlitzGame {
   const pool = useMemo(() => buildPool(settings.generations), [settings.generations]);
 
   const [found, setFound] = useState<number[]>([]);
-  const [entry, setEntry] = useState("");
   const [phase, setPhase] = useState<BlitzPhase>("playing");
   const [now, setNow] = useState(() => Date.now());
   const deadline = useRef(Date.now() + settings.durationMs);
@@ -41,22 +41,16 @@ export function useBlitzGame(settings: BlitzSettings): BlitzGame {
     if (phase === "playing" && found.length === pool.ids.length) setPhase("finished");
   }, [found.length, phase, pool.ids.length]);
 
-  const submit = useCallback(
-    (value: string) => {
-      setEntry(value);
-      if (phase !== "playing") return;
-      const match = matchPokemonName(value, pool);
-      if (!match) return;
-      setFound((current) => {
-        // Retaper un Pokémon déjà trouvé ne le compte pas deux fois, mais vide quand même
-        // le champ : sinon le joueur croit que sa frappe n'a pas été prise en compte.
-        if (current.includes(match.id)) return current;
-        return [...current, match.id];
-      });
-      setEntry("");
-    },
-    [phase, pool],
-  );
+  const remember = useCallback((match: { id: number }) => {
+    setFound((current) => {
+      // Retaper un Pokémon déjà trouvé ne le compte pas deux fois ; c'est
+      // `useBlitzEntry` qui vide le champ dans les deux cas.
+      if (current.includes(match.id)) return current;
+      return [...current, match.id];
+    });
+  }, []);
+
+  const { entry, submit } = useBlitzEntry(pool, remember, phase === "playing");
 
   return {
     phase,

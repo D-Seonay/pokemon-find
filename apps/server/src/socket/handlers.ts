@@ -1,7 +1,9 @@
 import {
   type Ack,
+  type BlitzSettings,
   ERROR_MESSAGES,
   type ErrorCode,
+  type GameMode,
   type GameSettings,
   type JoinPayload,
   pokemonById,
@@ -149,9 +151,12 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
           // room:state seul ramène le lobby : un reconnecté en pleine manche, en pleine
           // révélation ou après la fin de partie a aussi besoin de l'événement de phase
           // correspondant, adressé à lui seul (pas de diffusion à toute la room).
-          const snapshot = room.snapshotForRejoin();
+          const snapshot = room.snapshotForRejoin(playerId);
           if (snapshot.kind === "round") {
             socket.emit("round:start", snapshot.payload);
+          } else if (snapshot.kind === "blitz") {
+            // À ce seul socket : `found` est la liste du reconnecté, pas celle de la room.
+            socket.emit("blitz:start", snapshot.payload);
           } else if (snapshot.kind === "reveal") {
             const { targetId, ...rest } = snapshot.payload;
             socket.emit("round:reveal", { ...rest, target: pokemonById(targetId) });
@@ -169,6 +174,15 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
       safe<{ settings: GameSettings }, { state: RoomState }>(({ settings }) => {
         const room = currentRoom();
         room.updateSettings(selfId(), settings);
+        return { state: room.toState() };
+      }),
+    );
+
+    socket.on(
+      "room:mode",
+      safe<{ mode: GameMode; blitz: BlitzSettings }, { state: RoomState }>(({ mode, blitz }) => {
+        const room = currentRoom();
+        room.updateMode(selfId(), mode, blitz);
         return { state: room.toState() };
       }),
     );
@@ -197,6 +211,13 @@ export function registerHandlers(io: AppServer, store: RoomStore, config: Config
           currentRoom().answer(selfId(), roundIndex, pokemonId);
           return { accepted: true as const };
         },
+      ),
+    );
+
+    socket.on(
+      "blitz:submit",
+      safe<{ names: string[] }, { count: number; found: number[] }>(({ names }) =>
+        currentRoom().submitBlitz(selfId(), names),
       ),
     );
 

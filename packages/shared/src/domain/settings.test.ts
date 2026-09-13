@@ -4,6 +4,7 @@ import {
   InvalidSettingsError,
   UNLIMITED_ROUND_MS,
   isUnlimitedRound,
+  validateGameMode,
   validateSettings,
 } from "./settings.js";
 
@@ -93,5 +94,18 @@ describe("durée sans limite", () => {
     expect(() =>
       validateSettings({ generations: [1], roundDurationMs: 42, roundCount: 10 }),
     ).toThrow();
+  });
+});
+
+describe("validateGameMode", () => {
+  it("accepte les deux modes de jeu d'une room", () => {
+    expect(validateGameMode("classic")).toBe("classic");
+    expect(validateGameMode("blitz")).toBe("blitz");
+  });
+
+  it("refuse un mode inconnu plutôt que de le laisser passer", () => {
+    expect(() => validateGameMode("solo")).toThrow(InvalidSettingsError);
+    expect(() => validateGameMode(undefined)).toThrow(InvalidSettingsError);
+    expect(() => validateGameMode(0)).toThrow(InvalidSettingsError);
   });
 });
