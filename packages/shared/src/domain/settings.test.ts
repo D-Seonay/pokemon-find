@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_SETTINGS, InvalidSettingsError, validateSettings } from "./settings.js";
+import {
+  DEFAULT_SETTINGS,
+  InvalidSettingsError,
+  UNLIMITED_ROUND_MS,
+  isUnlimitedRound,
+  validateSettings,
+} from "./settings.js";
 
 describe("validateSettings", () => {
   it("accepte les réglages par défaut", () => {
@@ -56,5 +62,36 @@ describe("validateSettings", () => {
     expect(() => validateSettings({ ...DEFAULT_SETTINGS, generations: 123 })).toThrow(
       InvalidSettingsError,
     );
+  });
+});
+
+describe("durée sans limite", () => {
+  it("est exprimée par zéro, et non par Infinity qui ne survit pas au JSON", () => {
+    expect(UNLIMITED_ROUND_MS).toBe(0);
+    // La garde qui justifie ce choix : Infinity se sérialise en null.
+    expect(JSON.parse(JSON.stringify({ ms: Infinity })).ms).toBeNull();
+    expect(JSON.parse(JSON.stringify({ ms: UNLIMITED_ROUND_MS })).ms).toBe(0);
+  });
+
+  it("fait partie des durées acceptées par la validation", () => {
+    const settings = validateSettings({
+      generations: [1],
+      roundDurationMs: UNLIMITED_ROUND_MS,
+      roundCount: 10,
+    });
+    expect(settings.roundDurationMs).toBe(0);
+    expect(isUnlimitedRound(settings.roundDurationMs)).toBe(true);
+  });
+
+  it("accepte aussi la minute", () => {
+    const settings = validateSettings({ generations: [1], roundDurationMs: 60000, roundCount: 10 });
+    expect(settings.roundDurationMs).toBe(60000);
+    expect(isUnlimitedRound(settings.roundDurationMs)).toBe(false);
+  });
+
+  it("refuse toujours une durée hors liste", () => {
+    expect(() =>
+      validateSettings({ generations: [1], roundDurationMs: 42, roundCount: 10 }),
+    ).toThrow();
   });
 });

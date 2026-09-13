@@ -265,8 +265,18 @@ de 10 manches est donc 10 000.
 
 ### 5.4 Chrono
 
-- Durées proposées : **10 s**, **15 s** (défaut), **25 s**. Aucune autre valeur n'est
-  acceptée par le serveur.
+- Durées proposées : **10 s**, **15 s** (défaut), **25 s**, **1 min**, et **sans limite**.
+  Aucune autre valeur n'est acceptée par le serveur.
+- « Sans limite » est transporté par la valeur `0` (`UNLIMITED_ROUND_MS`), et non par
+  `Infinity` : les réglages transitent en JSON, où `Infinity` devient `null` et échoue à
+  la validation. Dans ce mode, aucune fermeture de manche n'est planifiée au chronomètre ;
+  la manche se termine quand **tous les joueurs connectés ont répondu**, et en solo sur la
+  seule réponse du joueur. Le temps de réponse retenu est le temps réellement écoulé, et
+  une absence de réponse se voit imputer la durée réelle de la manche — sinon le silence
+  serait le meilleur temps possible au départage.
+- Conséquence assumée du mode sans limite en multijoueur : un joueur connecté qui ne
+  répond jamais bloque la manche pour tout le monde. Seule la déconnexion (au bout de
+  `RECONNECT_GRACE_MS`) ou l'expiration de la room (`ROOM_MAX_AGE_MS`) y met fin.
 - Le décompte est affiché sous forme d'anneau et de secondes entières arrondies vers le
   haut (`ceil`), donc de `15` à `0`.
 - Une réponse validée arrête la manche pour ce joueur ; il attend alors les autres (en

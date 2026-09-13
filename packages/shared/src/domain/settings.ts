@@ -1,6 +1,17 @@
 import { type GenerationId, isGenerationId } from "./generations.js";
 
-export const ROUND_DURATIONS = [10000, 15000, 25000] as const;
+/**
+ * Sentinelle « sans limite de temps ». Zéro et non `Infinity` : les réglages transitent
+ * en JSON par le WebSocket, et `JSON.stringify(Infinity)` produit `null`, ce qui ferait
+ * échouer la validation à l'arrivée sans rien dire d'utile.
+ */
+export const UNLIMITED_ROUND_MS = 0;
+
+export const ROUND_DURATIONS = [10000, 15000, 25000, 60000, UNLIMITED_ROUND_MS] as const;
+
+export function isUnlimitedRound(roundDurationMs: number): boolean {
+  return roundDurationMs === UNLIMITED_ROUND_MS;
+}
 export const ROUND_COUNTS = [5, 10, 15] as const;
 
 export type RoundDurationMs = (typeof ROUND_DURATIONS)[number];

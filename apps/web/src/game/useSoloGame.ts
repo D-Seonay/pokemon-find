@@ -1,4 +1,5 @@
 import {
+  isUnlimitedRound,
   type GameSettings,
   type Pool,
   buildPool,
@@ -24,7 +25,8 @@ export type SoloGame = {
   roundIndex: number;
   roundCount: number;
   targetId: number;
-  remainingMs: number;
+  /** `null` quand la partie est sans limite de temps : il n'y a pas de décompte. */
+  remainingMs: number | null;
   totalScore: number;
   rounds: SoloRound[];
   pool: Pool;
@@ -92,17 +94,28 @@ export function useSoloGame(settings: GameSettings, seed: string): SoloGame {
   }, [phase]);
 
   useEffect(() => {
+    // Sans limite de temps, une manche ne se termine que sur la réponse du joueur. La
+    // révélation, elle, garde son enchaînement automatique : elle n'a rien à voir avec
+    // le temps de réflexion.
+    if (phase === "round" && isUnlimitedRound(settings.roundDurationMs)) return;
     if (now < deadline) return;
     if (phase === "round") finishRound(null);
     else if (phase === "reveal") advance();
-  }, [advance, deadline, finishRound, now, phase]);
+  }, [advance, deadline, finishRound, now, phase, settings.roundDurationMs]);
 
   return {
     phase,
     roundIndex: index,
     roundCount: targets.length,
     targetId: targets[index] ?? targets[targets.length - 1]!,
-    remainingMs: phase === "round" ? Math.max(0, deadline - now) : 0,
+    // `null` plutôt que zéro : l'écran doit pouvoir distinguer « plus de temps » de
+    // « pas de décompte du tout », et masquer le chrono dans le second cas.
+    remainingMs:
+      phase === "round"
+        ? isUnlimitedRound(settings.roundDurationMs)
+          ? null
+          : Math.max(0, deadline - now)
+        : 0,
     totalScore: rounds.reduce((sum, round) => sum + round.points, 0),
     rounds,
     pool,

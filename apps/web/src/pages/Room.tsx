@@ -1,4 +1,4 @@
-import { buildPool, type GameSettings } from "@pkfind/shared";
+import { buildPool, type GameSettings, isUnlimitedRound } from "@pkfind/shared";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "../components/Button.js";
@@ -113,7 +113,9 @@ export function Room() {
             </ul>
           </header>
           <Timer
-            remainingMs={room.round.localEndsAt - now}
+            remainingMs={
+              isUnlimitedRound(state.settings.roundDurationMs) ? null : room.round.localEndsAt - now
+            }
             totalMs={state.settings.roundDurationMs}
           />
           <TargetNumber id={room.round.targetId} maxId={pool.maxId} />

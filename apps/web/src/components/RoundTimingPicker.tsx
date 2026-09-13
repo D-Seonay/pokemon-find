@@ -5,6 +5,7 @@ import {
   type RoundDurationMs,
 } from "@pkfind/shared";
 import { useId } from "react";
+import { formatRoundDuration } from "../format.js";
 
 /**
  * Le temps par manche et le nombre de manches, partagés par la configuration solo et le
@@ -38,11 +39,11 @@ export function RoundTimingPicker({
               <input
                 type="radio"
                 name={durationGroup}
-                aria-label={`${duration / 1000} s`}
+                aria-label={formatRoundDuration(duration)}
                 checked={durationMs === duration}
                 onChange={() => onDurationChange(duration)}
               />
-              <span className="mono">{duration / 1000} s</span>
+              <span className="mono">{formatRoundDuration(duration)}</span>
             </label>
           ))}
         </div>

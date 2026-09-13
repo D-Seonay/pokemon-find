@@ -7,7 +7,31 @@ const COLORS = {
   danger: "var(--danger)",
 } as const;
 
-export function Timer({ remainingMs, totalMs }: { remainingMs: number; totalMs: number }) {
+export function Timer({
+  remainingMs,
+  totalMs,
+}: {
+  /** `null` quand la manche est sans limite de temps : il n'y a rien à décompter. */
+  remainingMs: number | null;
+  totalMs: number;
+}) {
+  // Un anneau plein et figé plutôt qu'un chrono absent : la place reste occupée, et le
+  // joueur voit qu'il n'y a pas de compte à rebours au lieu de croire qu'il n'a pas chargé.
+  if (remainingMs === null) {
+    return (
+      <div className="flex items-center justify-center">
+        <span
+          role="img"
+          aria-label="Pas de limite de temps"
+          className="mono flex h-11 w-11 items-center justify-center rounded-full border-4 text-xl"
+          style={{ borderColor: "var(--border)", color: "var(--text-dim)" }}
+        >
+          ∞
+        </span>
+      </div>
+    );
+  }
+
   const clamped = Math.max(0, Math.min(remainingMs, totalMs));
   const seconds = Math.ceil(clamped / 1000);
   const state = clamped <= 2000 ? "danger" : clamped <= 5000 ? "warn" : "normal";

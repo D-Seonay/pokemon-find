@@ -8,6 +8,7 @@ import {
   rngFromSeed,
   type RoomStatus,
   type RoundResult,
+  isUnlimitedRound,
   scoreForAnswer,
   type Standing,
 } from "@pkfind/shared";
@@ -223,11 +224,18 @@ export class RoundEngine {
     if (!this.pool.ids.includes(pokemonId)) throw new RoomError("NOT_IN_POOL");
 
     const elapsed = Date.now() - this.roundStartedAt;
-    if (elapsed > this.roundDurationMs + this.timings.answerGraceMs) {
+    const unlimited = isUnlimitedRound(this.roundDurationMs);
+    if (!unlimited && elapsed > this.roundDurationMs + this.timings.answerGraceMs) {
       throw new RoomError("ROUND_CLOSED");
     }
 
-    scoring.answer = { pokemonId, responseTimeMs: Math.min(elapsed, this.roundDurationMs) };
+    // Sans limite, le temps de réponse est le temps réellement mis ; le borner par
+    // `roundDurationMs` le ramènerait à zéro, et donnerait à tout le monde le même
+    // temps parfait au départage.
+    scoring.answer = {
+      pokemonId,
+      responseTimeMs: unlimited ? elapsed : Math.min(elapsed, this.roundDurationMs),
+    };
     this.listeners.onAnswered({ playerId });
     this.host.emitState();
 
@@ -330,7 +338,12 @@ export class RoundEngine {
     this.host.emitState();
     // La fermeture automatique attend la tolérance de latence en plus de la durée nominale,
     // sans quoi la fenêtre de grâce de `answer()` serait du code mort.
-    this.schedule(() => this.closeRound(), this.roundDurationMs + this.timings.answerGraceMs);
+    // Sans limite de temps, rien ne referme la manche au chronomètre : elle se termine
+    // quand tous les joueurs connectés ont répondu (voir `answer`). Planifier malgré tout
+    // fermerait la manche au bout de `answerGraceMs`, soit presque immédiatement.
+    if (!isUnlimitedRound(this.roundDurationMs)) {
+      this.schedule(() => this.closeRound(), this.roundDurationMs + this.timings.answerGraceMs);
+    }
   }
 
   private closeRound(): void {
@@ -342,7 +355,13 @@ export class RoundEngine {
       const answer = scoring.answer;
       const points = scoreForAnswer(targetId, answer?.pokemonId ?? null, this.pool.span);
       scoring.score += points;
-      scoring.totalResponseTimeMs += answer?.responseTimeMs ?? this.roundDurationMs;
+      // Ne pas avoir répondu doit coûter au moins autant que la réponse la plus lente.
+      // Sans limite, `roundDurationMs` vaut zéro : s'en servir ferait du silence le
+      // meilleur temps possible, donc un avantage au départage.
+      const noAnswerMs = isUnlimitedRound(this.roundDurationMs)
+        ? Date.now() - this.roundStartedAt
+        : this.roundDurationMs;
+      scoring.totalResponseTimeMs += answer?.responseTimeMs ?? noAnswerMs;
       return {
         playerId: player.id,
         nickname: player.nickname,

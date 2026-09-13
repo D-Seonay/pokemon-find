@@ -279,3 +279,87 @@ describe("boucle de jeu", () => {
     expect(room.toState().roundIndex).toBe(-1);
   });
 });
+
+describe("durée sans limite", () => {
+  // `roundDurationMsOverride` court-circuiterait le réglage : on l'écarte pour que la
+  // durée vienne bien des réglages de la room, comme en production.
+  const UNLIMITED: RoomTimings = {
+    countdownMs: 10,
+    revealMs: 10,
+    answerGraceMs: 0,
+    allAnsweredDelayMs: 5,
+  };
+
+  function unlimitedRoom(): Room {
+    const r = new Room("WXYZ", UNLIMITED, events, () => SEED);
+    r.updateSettingsUnchecked({ ...DEFAULT_SETTINGS, roundDurationMs: 0 });
+    return r;
+  }
+
+  it("ne referme pas la manche toute seule", async () => {
+    const r = unlimitedRoom();
+    const host = r.addPlayer("Mathéo");
+    r.addPlayer("Léa");
+    r.start(host.playerId);
+    await wait(60);
+
+    // Sans garde, `closeRound` serait planifié à 0 + answerGraceMs, donc immédiatement.
+    expect(events.onReveal).not.toHaveBeenCalled();
+    expect(r.toState().status).toBe("round");
+    r.dispose();
+  });
+
+  it("accepte une réponse largement après le début de la manche", async () => {
+    const r = unlimitedRoom();
+    const host = r.addPlayer("Mathéo");
+    const guest = r.addPlayer("Léa");
+    r.start(host.playerId);
+    await wait(60);
+
+    // Avec la borne habituelle, tout ce qui dépasse 0 + grâce serait rejeté.
+    expect(() => r.answer(host.playerId, 0, targets[0] as number)).not.toThrow();
+    expect(() => r.answer(guest.playerId, 0, targets[0] as number)).not.toThrow();
+    r.dispose();
+  });
+
+  it("referme la manche quand tout le monde a répondu", async () => {
+    const r = unlimitedRoom();
+    const host = r.addPlayer("Mathéo");
+    const guest = r.addPlayer("Léa");
+    r.start(host.playerId);
+    await wait(30);
+    r.answer(host.playerId, 0, targets[0] as number);
+    r.answer(guest.playerId, 0, targets[0] as number);
+    await wait(40);
+
+    expect(events.onReveal).toHaveBeenCalled();
+    r.dispose();
+  });
+
+  it("ne récompense pas l'absence de réponse au départage du temps", async () => {
+    const r = unlimitedRoom();
+    const host = r.addPlayer("Mathéo");
+    const guest = r.addPlayer("Léa");
+    r.start(host.playerId);
+    await wait(40);
+    // Léa se déconnecte sans répondre : la manche se referme sur la seule réponse de l'hôte.
+    r.markDisconnected(guest.playerId);
+    r.answer(host.playerId, 0, targets[0] as number);
+    await wait(40);
+
+    const standings = r.toState().players;
+    const hostTime = standings.find((p) => p.id === host.playerId);
+    expect(hostTime).toBeDefined();
+    // Le temps de non-réponse retombait sur roundDurationMs, soit 0 en illimité : ne pas
+    // répondre serait alors le meilleur temps possible, donc un avantage au départage.
+    const reveal = (events.onReveal as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
+      standings: { playerId: string; totalResponseTimeMs: number }[];
+    };
+    const guestStanding = reveal.standings.find((s) => s.playerId === guest.playerId);
+    const hostStanding = reveal.standings.find((s) => s.playerId === host.playerId);
+    expect(guestStanding?.totalResponseTimeMs).toBeGreaterThanOrEqual(
+      hostStanding?.totalResponseTimeMs ?? 0,
+    );
+    r.dispose();
+  });
+});
