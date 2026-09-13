@@ -105,7 +105,7 @@ export function Room() {
           endsAt={room.blitz.localEndsAt}
           now={now}
           players={state.players}
-          onFound={(pokemon) => room.actions.submitBlitz(pokemon.nameFr)}
+          onFound={(pokemon) => room.actions.submitBlitz(pokemon.nameFr, pokemon.id)}
           {...(room.playerId ? { playerId: room.playerId } : {})}
         />
       );

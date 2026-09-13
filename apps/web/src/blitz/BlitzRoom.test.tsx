@@ -170,6 +170,45 @@ describe("Room — blitz : partie en cours", () => {
     expect((sent[0]?.payload as { names: string[] }).names).toHaveLength(3);
   });
 
+  it("remplit la case immédiatement, sans attendre le serveur", () => {
+    vi.useFakeTimers();
+    renderRoom();
+    settleJoin(blitzState({ status: "blitz" }));
+    startBlitz();
+
+    fireEvent.change(screen.getByLabelText("Nommer un Pokémon"), {
+      target: { value: "bulbizarre" },
+    });
+
+    // Aucun temps avancé, donc rien n'est même parti sur le réseau : le joueur doit
+    // néanmoins voir sa trouvaille. Le tampon de deux secondes rendrait sinon le jeu
+    // poussif — on tape, et rien ne bouge.
+    expect(screen.getByText("1 / 151")).toBeInTheDocument();
+    expect(screen.getByText("Bulbizarre")).toBeInTheDocument();
+    expect(emittedOf("blitz:submit")).toHaveLength(0);
+  });
+
+  it("ne perd pas une trouvaille locale quand l'accusé d'un envoi antérieur arrive", () => {
+    vi.useFakeTimers();
+    renderRoom();
+    settleJoin(blitzState({ status: "blitz" }));
+    startBlitz();
+
+    const field = screen.getByLabelText("Nommer un Pokémon");
+    fireEvent.change(field, { target: { value: "bulbizarre" } });
+    act(() => vi.advanceTimersByTime(BLITZ_FLUSH_MS + 100));
+    // Trouvé APRÈS l'envoi, donc absent de l'accusé qui va suivre.
+    fireEvent.change(field, { target: { value: "salameche" } });
+    act(() => {
+      emittedOf("blitz:submit")[0]?.ack?.({ ok: true, data: { count: 1, found: [1] } });
+    });
+
+    // Remplacer la liste par celle du serveur ferait disparaître Salamèche de l'écran
+    // jusqu'au prochain envoi, deux secondes plus tard.
+    expect(screen.getByText("2 / 151")).toBeInTheDocument();
+    expect(screen.getByText("Salamèche")).toBeInTheDocument();
+  });
+
   it("s'aligne sur la liste renvoyée par le serveur, qui fait foi", () => {
     vi.useFakeTimers();
     renderRoom();

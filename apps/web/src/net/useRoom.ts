@@ -91,7 +91,7 @@ export type RoomView = {
      * (20 événements / 10 s) à un joueur rapide, qui se ferait déconnecter pour avoir
      * bien joué. Un envoi par seconde fait 10 par fenêtre, la moitié du plafond.
      */
-    submitBlitz: (name: string) => void;
+    submitBlitz: (name: string, pokemonId: number) => void;
     /** Choisit le jeu de la prochaine partie et, dans la foulée, les réglages blitz. */
     setMode: (mode: GameMode, blitz: BlitzSettings) => void;
     /** `sameSeries: true` rejoue la série de cibles de la partie qui vient de se terminer. */
@@ -401,7 +401,16 @@ export function useRoom(input: {
           setActionError(ack.ok ? null : ack.message);
         });
       },
-      submitBlitz: (name) => {
+      submitBlitz: (name, pokemonId) => {
+        // Remplissage immédiat : le tampon retarde l'envoi de deux secondes, et attendre
+        // l'accusé pour afficher rendrait le jeu poussif — on tape, et rien ne bouge. Le
+        // client reconnaît le Pokémon avec `matchPokemonName`, la fonction même dont le
+        // serveur se sert sur le même pool : leurs verdicts ne peuvent pas diverger.
+        setBlitz((current) =>
+          current && !current.found.includes(pokemonId)
+            ? { ...current, found: [...current.found, pokemonId] }
+            : current,
+        );
         blitzBuffer.current.push(name);
         if (blitzTimer.current !== null) return;
         blitzTimer.current = setTimeout(() => {
@@ -411,11 +420,16 @@ export function useRoom(input: {
           if (names.length === 0) return;
           getSocket().emit("blitz:submit", { names }, (ack) => {
             setActionError(ack.ok ? null : ack.message);
-            // Le serveur fait foi : il revalide chaque nom contre le pool et renvoie la
-            // liste complète. On s'aligne dessus plutôt que de tenir un compte local qui
-            // pourrait diverger.
-            if (ack.ok)
-              setBlitz((current) => (current ? { ...current, found: ack.data.found } : current));
+            if (!ack.ok) return;
+            // Union et non remplacement : cet accusé ne concerne que la fournée envoyée,
+            // et le joueur a pu trouver d'autres Pokémon entre-temps. Les écraser les
+            // ferait disparaître de l'écran jusqu'au prochain envoi, deux secondes plus
+            // tard. Le serveur reste seul juge du score ; il ne s'agit ici que d'affichage.
+            setBlitz((current) =>
+              current
+                ? { ...current, found: [...new Set([...current.found, ...ack.data.found])] }
+                : current,
+            );
           });
         }, BLITZ_FLUSH_MS);
       },
