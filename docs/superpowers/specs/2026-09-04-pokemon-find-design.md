@@ -108,6 +108,24 @@ environ 137 Mo. Au-delà de 96 px — la révélation, affichée à 140-160 px �
 Le repli reste en place : chaque `<img>` a un `onError` qui affiche une pastille avec
 l'initiale du Pokémon, désormais réservé à un fichier réellement manquant.
 
+### Fiches détaillées du Pokédex
+
+Les types, le gabarit, la catégorie, la description et les statistiques de base vivent
+dans un **fichier distinct**, `apps/web/public/pokemon-details.json` (généré par
+`scripts/fetch-pokemon-details.ts`), servi par notre serveur et chargé au moment où le
+Pokédex s'ouvre — jamais au démarrage du jeu.
+
+La séparation est délibérée : le jeu n'a besoin que de noms et de numéros, et ces fiches
+pèsent 70 Ko compressés, soit plus de la moitié du bundle actuel. Les embarquer les
+ferait payer à chaque joueur, y compris à celui qui n'ouvre jamais la liste. Mesuré :
+leur ajout à l'interface coûte 2,8 Ko au bundle (le code des fiches), contre 70 Ko si
+les données y étaient jointes.
+
+Chaque entrée relue est validée champ par champ, comme le stockage local. Un fichier
+absent, tronqué ou d'une version antérieure dégrade l'écran sans le casser : la grille,
+la recherche et le filtre par génération continuent de fonctionner, sans pastilles de
+types ni fiche détaillée.
+
 ### 4.2 Bornes de générations
 
 Ces bornes sont normatives et servent à construire les pools sans relire le dataset :

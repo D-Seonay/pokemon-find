@@ -1,3 +1,7 @@
 docs/
 pnpm-lock.yaml
 .superpowers/
+
+# Données générées par scripts/fetch-pokemon-details.ts, servies telles quelles au
+# navigateur : elles restent minifiées (265 Ko au lieu d'environ 1 Mo reformatées).
+apps/web/public/pokemon-details.json

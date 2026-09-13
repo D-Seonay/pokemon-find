@@ -1,18 +1,21 @@
 import {
   ALL_GENERATIONS,
   type GenerationId,
+  type Pokemon,
   buildPool,
   pokemonOfPool,
   searchPokemon,
 } from "@pkfind/shared";
-import { useMemo, useState } from "react";
-import { formatPokedexNumber } from "../format.js";
+import { useEffect, useMemo, useState } from "react";
+import { type DetailMap, loadDetails } from "../pokedex/details.js";
+import { PokedexCard } from "../pokedex/PokedexCard.js";
+import { PokemonDialog } from "../pokedex/PokemonDialog.js";
 import { GenerationPicker } from "./GenerationPicker.js";
-import { PokemonSprite } from "./PokemonSprite.js";
 
 /**
- * La liste consultable des Pokémon : recherche, filtre par génération, numéros. Partagée
- * entre la page `/pokedex` et le lobby multijoueur, où elle s'ouvre sans quitter la room.
+ * La liste consultable des Pokémon : recherche, filtre par génération, grille de fiches.
+ * Partagée entre la page `/pokedex` et le lobby multijoueur, où elle s'ouvre sans quitter
+ * la room.
  *
  * `initialGenerations` sert au lobby, qui l'ouvre sur les générations de la partie à
  * venir plutôt que sur les neuf — on révise ce qu'on va jouer.
@@ -24,6 +27,25 @@ export function PokedexBrowser({
 }) {
   const [generations, setGenerations] = useState<GenerationId[]>(initialGenerations);
   const [query, setQuery] = useState("");
+  const [details, setDetails] = useState<DetailMap>({});
+  const [open, setOpen] = useState<Pokemon | null>(null);
+
+  // Chargées à l'ouverture du Pokédex, pas au démarrage du jeu : 70 Ko compressés que
+  // seuls paient ceux qui consultent la liste (voir pokedex/details.ts). Un échec n'est
+  // pas fatal — la grille reste utilisable, sans pastilles de types ni fiche détaillée.
+  useEffect(() => {
+    let alive = true;
+    loadDetails()
+      .then((loaded) => {
+        if (alive) setDetails(loaded);
+      })
+      .catch(() => {
+        /* table vide : l'écran fonctionne en mode dégradé. */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   const pool = useMemo(() => buildPool(generations), [generations]);
 
@@ -54,23 +76,27 @@ export function PokedexBrowser({
           Aucun Pokémon ne correspond à cette recherche.
         </p>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           {entries.map((pokemon) => (
-            <li
-              key={pokemon.id}
-              className="flex items-center gap-3 rounded-[var(--radius-sm)] bg-[var(--surface)] px-3 py-2"
-            >
-              <PokemonSprite pokemon={pokemon} size={40} />
-              <span className="mono text-[var(--text-dim)]">
-                {formatPokedexNumber(pokemon.id, pool.maxId)}
-              </span>
-              <span>{pokemon.nameFr}</span>
-              {pokemon.nameEn !== pokemon.nameFr && (
-                <span className="text-sm text-[var(--text-dim)]">{pokemon.nameEn}</span>
-              )}
+            <li key={pokemon.id} className="contents">
+              <PokedexCard
+                pokemon={pokemon}
+                detail={details[String(pokemon.id)]}
+                maxId={pool.maxId}
+                onOpen={() => setOpen(pokemon)}
+              />
             </li>
           ))}
         </ul>
+      )}
+
+      {open && (
+        <PokemonDialog
+          pokemon={open}
+          detail={details[String(open.id)]}
+          maxId={pool.maxId}
+          onClose={() => setOpen(null)}
+        />
       )}
     </div>
   );
