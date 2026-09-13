@@ -12,11 +12,12 @@ import { RoomError } from "./errors.js";
 import type { PlayerProgress, RoundListeners, RoundPlayer } from "./RoundEngine.js";
 
 /**
- * Bornes de garde sur une fournée de noms. Le client honnête en envoie au plus trois par
- * seconde (voir `BLITZ_FLUSH_MS`) ; au-delà, c'est un client modifié, et le serveur ne
- * doit pas accepter de travailler proportionnellement à ce qu'on lui envoie. Les noms
- * excédentaires sont ignorés, pas refusés : une erreur apprendrait au tricheur où est la
- * limite, sans rien apporter à personne d'honnête.
+ * Bornes de garde sur une fournée de noms. Le client honnête regroupe ses trouvailles
+ * toutes les deux secondes (voir `BLITZ_FLUSH_MS`) : même en tapant très vite, cela fait
+ * une poignée de noms par envoi, très loin de cette borne. Au-delà, c'est un client
+ * modifié, et le serveur ne doit pas accepter de travailler proportionnellement à ce
+ * qu'on lui envoie. Les noms excédentaires sont ignorés, pas refusés : une erreur
+ * apprendrait au tricheur où est la limite, sans rien apporter à personne d'honnête.
  */
 export const MAX_NAMES_PER_SUBMIT = 32;
 /** Le plus long nom du jeu tient très en dessous ; au-delà c'est du remplissage. */

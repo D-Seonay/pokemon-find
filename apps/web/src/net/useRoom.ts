@@ -19,12 +19,16 @@ type Session = { roomCode: string; playerId: string; playerToken: string };
 const SETTINGS_DEBOUNCE_MS = 250;
 
 /**
- * Délai de regroupement des trouvailles blitz avant envoi. Une seconde : un joueur rapide
- * trouve quelques Pokémon par seconde, et un événement par trouvaille le ferait passer
- * au-dessus des 20 événements / 10 s tolérés par le serveur. Ainsi, dix envois par
- * fenêtre au maximum, quelle que soit sa vitesse de frappe.
+ * Délai de regroupement des trouvailles blitz avant envoi. Un événement par trouvaille
+ * ferait passer un joueur rapide au-dessus des 20 événements / 10 s tolérés par le
+ * serveur, qui le déconnecterait pour avoir bien joué.
+ *
+ * Deux secondes : cinq envois par fenêtre au maximum, soit le quart du plafond, quelle
+ * que soit la vitesse de frappe. Le prix à payer est la latence d'affichage — la grille
+ * et le classement ne se mettent à jour qu'à l'accusé de réception du serveur, donc
+ * jusqu'à deux secondes après la frappe.
  */
-export const BLITZ_FLUSH_MS = 1000;
+export const BLITZ_FLUSH_MS = 2000;
 
 export type RoundView = {
   roundIndex: number;

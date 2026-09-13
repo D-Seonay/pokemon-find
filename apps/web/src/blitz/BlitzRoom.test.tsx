@@ -4,6 +4,7 @@ import { StrictMode } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emittedOf, resetFakeSocket, triggerSocketEvent } from "../net/fakeSocket.testkit.js";
+import { BLITZ_FLUSH_MS } from "../net/useRoom.js";
 import { Room } from "../pages/Room.js";
 
 vi.mock("../net/socket.js", async () => {
@@ -162,7 +163,7 @@ describe("Room — blitz : partie en cours", () => {
     }
 
     expect(emittedOf("blitz:submit")).toHaveLength(0); // rien n'est encore parti
-    act(() => vi.advanceTimersByTime(1100));
+    act(() => vi.advanceTimersByTime(BLITZ_FLUSH_MS + 100));
 
     const sent = emittedOf("blitz:submit");
     expect(sent).toHaveLength(1);
@@ -178,7 +179,7 @@ describe("Room — blitz : partie en cours", () => {
     fireEvent.change(screen.getByLabelText("Nommer un Pokémon"), {
       target: { value: "bulbizarre" },
     });
-    act(() => vi.advanceTimersByTime(1100));
+    act(() => vi.advanceTimersByTime(BLITZ_FLUSH_MS + 100));
     act(() => {
       emittedOf("blitz:submit")[0]?.ack?.({ ok: true, data: { count: 1, found: [1] } });
     });
