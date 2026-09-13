@@ -1,6 +1,6 @@
 # =============================================================================
 # configure-ingress.yml
-# Route pokemon-find.seonay.eu vers la VM depuis l'ingress Traefik déjà en
+# Route pokemon.seonay.eu vers la VM depuis l'ingress Traefik déjà en
 # place sur le cluster k3s de lifeos, hébergé sur le même hôte Proxmox.
 #
 # Aucune règle NAT supplémentaire n'est nécessaire : Traefik écoute déjà
@@ -21,7 +21,7 @@
 #   ansible-playbook -i ansible/inventory.ini ansible/configure-ingress.yml
 # =============================================================================
 
-- name: Router pokemon-find.seonay.eu vers la VM pokemon-find
+- name: Router pokemon.seonay.eu vers la VM pokemon-find
   hosts: k3s
   become: true
   gather_facts: false
@@ -29,7 +29,7 @@
   vars:
     app_ip: "10.10.10.52"
     app_port: 3000
-    ingress_host: "pokemon-find.seonay.eu"
+    ingress_host: "pokemon.seonay.eu"
     kubeconfig: /etc/rancher/k3s/k3s.yaml
 
   tasks:

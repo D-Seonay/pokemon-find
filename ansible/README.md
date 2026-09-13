@@ -27,7 +27,7 @@ routage (`configure-ingress.yml`).
 | VM k3s (lifeos) | `10.10.10.50`                           |
 | VM bardenoa     | `10.10.10.51`, SSH `2223`               |
 | VM pokemon-find | `10.10.10.52`, SSH `2224`, vmid `9002`  |
-| Domaine         | `pokemon-find.seonay.eu`                |
+| Domaine         | `pokemon.seonay.eu`                     |
 
 ## Prérequis
 
@@ -66,7 +66,7 @@ ansible-playbook -i ansible/inventory.ini ansible/setup-vm-nat.yml
 #    juste après le playbook précédent, patiente puis relance.
 ansible-playbook -i ansible/inventory.ini ansible/deploy-pokemon-find.yml
 
-# 4. Route pokemon-find.seonay.eu vers la VM depuis l'ingress k3s existant
+# 4. Route pokemon.seonay.eu vers la VM depuis l'ingress k3s existant
 ansible-playbook -i ansible/inventory.ini ansible/configure-ingress.yml
 
 # 5. (Optionnel, une seule fois) Runner GitHub Actions auto-hébergé, pour que
@@ -119,10 +119,16 @@ rendant la main au démarrage du conteneur et non quand l'application est prête
 
 ## DNS
 
-`pokemon-find.seonay.eu` doit pointer vers l'IP publique de la Freebox. Le port
-forward 80/443 vers la VM k3s existe déjà, rien à ajouter. En attendant la
-propagation DNS, tu peux tester en mappant le domaine vers cette IP publique
-dans le `/etc/hosts` de ta machine cliente (pas sur les VM).
+Rien à déclarer : `seonay.eu` a un enregistrement joker (`*.seonay.eu` en CNAME
+vers `life.freeboxos.fr`), donc n'importe quel sous-domaine résout déjà vers
+l'IP publique de la Freebox. Vérifié avec un nom tiré au hasard, qui résout lui
+aussi — et que Traefik renvoie en 404, faute de règle correspondante.
+
+Le port forward 80/443 vers la VM k3s existe déjà. Changer de sous-domaine ne
+demande donc que de modifier `ingress_host` dans `configure-ingress.yml` et de
+relancer le playbook : `kubectl apply` met à jour l'Ingress existant (même nom
+de ressource), l'ancien nom cesse de répondre, et cert-manager émet un nouveau
+certificat en moins d'une minute.
 
 ## HTTPS
 
@@ -136,7 +142,7 @@ ssh -J root@192.168.1.253 debian@10.10.10.50 \
   "sudo KUBECONFIG=/etc/rancher/k3s/k3s.yaml kubectl get certificate pokemon-find-tls"
 ```
 
-`READY: True` signifie que `https://pokemon-find.seonay.eu` sert un certificat
+`READY: True` signifie que `https://pokemon.seonay.eu` sert un certificat
 valide.
 
 ## WebSocket
