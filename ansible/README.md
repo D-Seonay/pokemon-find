@@ -31,8 +31,7 @@ routage (`configure-ingress.yml`).
 
 ## Prérequis
 
-- Accès SSH root à l'hôte Proxmox (`192.168.1.253` — cette IP peut changer,
-  vérifie-la dans l'interface de la Freebox si un playbook part en timeout)
+- Accès SSH root à l'hôte Proxmox (`192.168.1.253`)
 - Accès SSH à la VM k3s (`10.10.10.50`), joignable uniquement via `ProxyJump`
   par l'hôte Proxmox
 - `ansible-playbook` en local (`brew install ansible`)
@@ -169,10 +168,13 @@ groupes `[k3s]` et `[pokemon_find]` — accepte une clé _jamais vue_, mais refu
 toujours une clé qui _change_. Si l'erreur persiste, cherche une entrée en
 conflit dans `~/.ssh/known_hosts` (`ssh-keygen -R 10.10.10.52`).
 
-**Timeout SSH vers l'hôte Proxmox** : l'hôte n'a que du WiFi, sans réservation
-DHCP statique connue — son IP peut changer entre deux sessions. Vérifie-la dans
-l'interface de la Freebox, puis mets-la à jour dans `ansible/inventory.ini`, à
-la fois pour `[proxmox]` et dans les `ProxyJump` des deux autres groupes.
+**Timeout SSH vers l'hôte Proxmox** : son IP est configurée en statique dans
+`/etc/network/interfaces` (`iface wlo1 inet static`, `192.168.1.253/24`), elle ne
+bouge donc pas d'elle-même — contrairement à ce que cette section affirmait, par
+recopie du README de bardenoa sans vérification. Si elle devient malgré tout
+injoignable, les causes plausibles sont un conflit d'adresse (la Freebox aurait
+attribué `.253` à un autre appareil : à exclure de sa plage DHCP, ou à réserver
+pour la MAC `34:2e:b7:94:12:95`) ou l'hôte simplement éteint.
 
 **VM à moitié provisionnée** : `create-proxmox-vm.yml` est idempotent seulement
 sur l'existence du `vmid`. Si `qm importdisk` ou l'injection de la clé SSH
