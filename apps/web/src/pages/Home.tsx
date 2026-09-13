@@ -33,6 +33,9 @@ export function Home() {
         <Button variant="ghost" onClick={() => go("/daily")}>
           Défi du jour
         </Button>
+        <Button variant="ghost" onClick={() => go("/blitz")}>
+          Contre la montre
+        </Button>
         <Button variant="ghost" onClick={() => go("/room/new")}>
           Créer une room
         </Button>

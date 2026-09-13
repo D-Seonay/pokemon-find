@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Link, Route, Routes, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
+import { BlitzGame } from "./pages/BlitzGame.js";
+import { BlitzSetup } from "./pages/BlitzSetup.js";
 import { Daily } from "./pages/Daily.js";
 import { Home } from "./pages/Home.js";
 import { JoinRoom } from "./pages/JoinRoom.js";
@@ -66,6 +68,8 @@ export function App() {
           <Route path="/solo" element={<SoloSetup />} />
           <Route path="/solo/play" element={<SoloGame />} />
           <Route path="/daily" element={<Daily />} />
+          <Route path="/blitz" element={<BlitzSetup />} />
+          <Route path="/blitz/play" element={<BlitzGame />} />
           <Route path="/pokedex" element={<Pokedex />} />
           <Route path="/pokedex/:id" element={<PokedexEntry />} />
           <Route path="/stats" element={<Stats />} />
